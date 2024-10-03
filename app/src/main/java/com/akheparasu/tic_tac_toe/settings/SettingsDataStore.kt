@@ -1,9 +1,12 @@
 package com.akheparasu.tic_tac_toe.settings
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.akheparasu.tic_tac_toe.utils.DEFAULT_GRID_SIZE
+import com.akheparasu.tic_tac_toe.utils.DEFAULT_VOLUME
 import com.akheparasu.tic_tac_toe.utils.Difficulty
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -14,7 +17,7 @@ class SettingsDataStore(private val context: Context) {
 
     private object PreferencesKeys {
         val DIFFICULTY = intPreferencesKey("difficulty")
-        val THEME = booleanPreferencesKey("theme")
+        val DARK_THEME = booleanPreferencesKey("darkTheme")
         val VOLUME = floatPreferencesKey("volume")
         val GRID_SIZE = intPreferencesKey("gridSize")
     }
@@ -25,14 +28,17 @@ class SettingsDataStore(private val context: Context) {
             Difficulty.fromLevel(level)
         }
 
-    val themeFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences -> preferences[PreferencesKeys.THEME] ?: false }
+    val darkThemeFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            val currentMode = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+            preferences[PreferencesKeys.DARK_THEME] ?: (currentMode == Configuration.UI_MODE_NIGHT_YES)
+        }
 
     val volumeFlow: Flow<Float> = context.dataStore.data
-        .map { preferences -> preferences[PreferencesKeys.VOLUME] ?: 1.0f }
+        .map { preferences -> preferences[PreferencesKeys.VOLUME] ?: DEFAULT_VOLUME }
 
     val gridSizeFlow: Flow<Int> = context.dataStore.data
-        .map { preferences -> preferences[PreferencesKeys.GRID_SIZE] ?: 3 }
+        .map { preferences -> preferences[PreferencesKeys.GRID_SIZE] ?: DEFAULT_GRID_SIZE }
 
     suspend fun saveDifficulty(difficulty: Difficulty) {
         context.dataStore.edit { preferences ->
@@ -40,9 +46,9 @@ class SettingsDataStore(private val context: Context) {
         }
     }
 
-    suspend fun saveTheme(isDarkMode: Boolean) {
+    suspend fun saveDarkTheme(isDarkTheme: Boolean) {
         context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.THEME] = isDarkMode
+            preferences[PreferencesKeys.DARK_THEME] = isDarkTheme
         }
     }
 

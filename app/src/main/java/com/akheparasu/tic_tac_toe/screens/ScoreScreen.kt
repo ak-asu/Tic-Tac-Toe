@@ -7,10 +7,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
 
 @Composable
-fun ScoreScreen(navController: NavHostController) {
+fun ScoreScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -24,9 +23,6 @@ fun ScoreScreen(navController: NavHostController) {
 
         Button(onClick = { /* Replay Game Logic */ }) {
             Text(text = "Replay")
-        }
-        Button(onClick = { navController.navigate("home") }) {
-            Text(text = "Back to Home")
         }
     }
 }
