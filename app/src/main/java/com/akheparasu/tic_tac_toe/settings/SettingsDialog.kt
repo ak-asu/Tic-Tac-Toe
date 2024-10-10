@@ -89,8 +89,7 @@ fun DifficultySelector() {
                     }
                 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (selectedDifficulty == difficulty) Color.Green else Color.Gray,
-                    contentColor = Color.White
+                    containerColor = if (selectedDifficulty == difficulty) selectedDifficulty.getColor() else Color.Gray,
                 ),
                 modifier = Modifier.weight(1f)
             ) {

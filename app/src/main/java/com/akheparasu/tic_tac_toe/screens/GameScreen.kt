@@ -1,5 +1,6 @@
 package com.akheparasu.tic_tac_toe.screens
 
+import android.bluetooth.BluetoothDevice
 import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.LocalIndication
@@ -15,16 +16,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.akheparasu.tic_tac_toe.utils.DEFAULT_GRID_SIZE
+import com.akheparasu.tic_tac_toe.utils.GameMode
+import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 
 @Composable
-fun GameScreen() {
+fun GameScreen(
+    gameMode: GameMode,
+    gridSize: Int,
+    originalConnectedDevice: BluetoothDevice?
+) {
     val settings = LocalSettings.current
-    val gridSizeFlow = settings.gridSizeFlow.collectAsState(initial = null)
     val difficultyFlow = settings.difficultyFlow.collectAsState(initial = null)
-    if (gridSizeFlow.value==null || difficultyFlow.value==null) {
+    if (difficultyFlow.value==null) {
         return Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -32,7 +38,6 @@ fun GameScreen() {
             CircularProgressIndicator()
         }
     }
-    val gridSize by rememberSaveable { mutableIntStateOf(gridSizeFlow.value!!) }
     // Define your gridSaver as before
 //    val gridSaver = Saver<List<List<String>>, ArrayList<ArrayList<String>>>(
 //        save = { grid ->
@@ -45,6 +50,12 @@ fun GameScreen() {
     var grid by rememberSaveable { mutableStateOf(Array(gridSize) { Array(gridSize) { "" } }) }
     var playerTurn by rememberSaveable { mutableStateOf(true) }
     val isGameComplete: (Array<Array<String>>) -> Boolean = { !it.any { c -> c.any { v -> v.isEmpty() } } }
+    val connectionService = LocalConnectionService.current
+    val connectedDevice = if (gameMode == GameMode.Online) {
+        connectionService.connectedDevice.collectAsState(initial = null)
+    } else {
+        null
+    }
 
     LaunchedEffect(playerTurn) {
         if (!playerTurn) {
@@ -62,6 +73,7 @@ fun GameScreen() {
             playerTurn = true
         }
     }
+    LaunchedEffect (connectedDevice) {  }
 
     Column(
         modifier = Modifier
