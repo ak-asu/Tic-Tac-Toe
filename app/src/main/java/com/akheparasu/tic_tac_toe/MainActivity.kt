@@ -56,8 +56,14 @@ class MainActivity : ComponentActivity() {
                             composable("home") {
                                 HomeScreen()
                             }
+                            /*
                             composable("game") {
                                 GameScreen()
+                            }
+                             */
+                            composable("game/{gameMode}") { backStackEntry ->
+                                val gameMode = backStackEntry.arguments?.getString("gameMode")?.toBoolean()
+                                GameScreen(gameMode = gameMode ?: false)
                             }
                             composable("score") {
                                 ScoreScreen()
