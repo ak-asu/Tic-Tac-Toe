@@ -25,6 +25,7 @@ import com.akheparasu.tic_tac_toe.utils.LocalSettings
 import com.akheparasu.tic_tac_toe.settings.SettingsDataStore
 import com.akheparasu.tic_tac_toe.ui.AppBar
 import com.akheparasu.tic_tac_toe.ui.theme.TicTacToeTheme
+import com.akheparasu.tic_tac_toe.TwoPlayer
 
 class MainActivity : ComponentActivity() {
     private val settingsDataStore by lazy { SettingsDataStore(this) }
@@ -55,14 +56,8 @@ class MainActivity : ComponentActivity() {
                             composable("home") {
                                 HomeScreen()
                             }
-                            /*
                             composable("game") {
                                 GameScreen()
-                            }
-                             */
-                            composable("game/{gameMode}") { backStackEntry ->
-                                val gameMode = backStackEntry.arguments?.getString("gameMode")?.toBoolean()
-                                GameScreen(gameMode = gameMode ?: false)
                             }
                             composable("score") {
                                 ScoreScreen()
