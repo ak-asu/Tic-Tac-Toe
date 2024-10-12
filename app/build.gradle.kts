@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("com.google.devtools.ksp")
+    id("com.google.dagger.hilt.android")
+    id("kotlin-kapt")
 }
 
 android {
@@ -76,4 +78,19 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+
+    //bluetooth dependencies
+
+    implementation(libs.androidx.hilt.navigation.compose)
+    //implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation(libs.hilt.android)
+    //implementation("com.google.dagger:hilt-android:2.45")
+    kapt(libs.hilt.android.compiler)
+    //kapt("com.google.dagger:hilt-android-compiler:2.45")
+    kapt(libs.androidx.hilt.compiler)
+    //kapt ("androidx.hilt:hilt-compiler:1.2.0")
+    implementation(libs.androidx.activity.ktx)
+
+
 }

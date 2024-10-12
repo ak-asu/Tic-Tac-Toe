@@ -28,13 +28,37 @@ import com.akheparasu.tic_tac_toe.ui.AppBar
 import com.akheparasu.tic_tac_toe.ui.theme.TicTacToeTheme
 import com.akheparasu.tic_tac_toe.TwoPlayer
 import com.akheparasu.tic_tac_toe.screens.AvailableDevicesScreen
+import android.app.Activity
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import android.Manifest
+
 
 class MainActivity : ComponentActivity() {
     private val settingsDataStore by lazy { SettingsDataStore(this) }
+    private lateinit var twoPlayer: TwoPlayer
+    private lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        twoPlayer = TwoPlayer(this)
+
+        requestPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            val allGranted = permissions.values.all { it }
+            if (allGranted) {
+                twoPlayer.discoverBluetoothDevices() // Start discovering devices if all permissions are granted
+            } else {
+                Toast.makeText(this, "Bluetooth permissions are not granted", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        requestPermissions()
+
         val careerViewModel: CareerViewModel by viewModels {
             CareerViewModelFactory(application)
         }
@@ -74,12 +98,23 @@ class MainActivity : ComponentActivity() {
                                 CareerScreen(careerViewModel)
                             }
                             composable("available_devices") {
-                                AvailableDevicesScreen(twoPlayer = TwoPlayer(LocalContext.current), activity = this@MainActivity)
+                                AvailableDevicesScreen(twoPlayer = twoPlayer, activity = this@MainActivity)
                             }
                         }
                     }
                 }
             }
         }
+    }
+    private fun requestPermissions() {
+        requestPermissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.BLUETOOTH,
+                Manifest.permission.BLUETOOTH_ADMIN,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT
+            )
+        )
     }
 }

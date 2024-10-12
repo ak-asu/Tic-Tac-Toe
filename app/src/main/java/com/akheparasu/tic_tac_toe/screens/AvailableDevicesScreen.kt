@@ -41,15 +41,9 @@ fun BluetoothDeviceItem(device: BluetoothDevice, onClick: (BluetoothDevice) -> U
 
 @Composable
 fun AvailableDevicesScreen(twoPlayer: TwoPlayer, activity: Activity) {
-
-    //get permissions, enable bluetooth, and start discovery of other devices
-    LaunchedEffect(Uint){
-        twoPlayer.requestPermissions(activity, 1)
-        twoPlayer.enableBluetooth(activity, 2)
-        twoPlayer.discoverBluetoothDevices()
-    }
+    //val context = LocalContext.current
     Column{
-        Text("Available Bluetooth Devices")
+        Text("Available Bluetooth Devices",modifier = Modifier.padding(16.dp))
 
         LazyColumn {
             // Iterating through each device in the `devices` list
@@ -59,6 +53,10 @@ fun AvailableDevicesScreen(twoPlayer: TwoPlayer, activity: Activity) {
                     device = device,
                     onClick = { selectedDevice -> // When the item is clicked, trigger the callback
                         // pair and connect the devices
+                        /*twoPlayer.pairDevice(selectedDevice)
+
+                        twoPlayer.connectToDevice(selectedDevice, activity)
+                        Toast.makeText(context, "Attempting to pair and connect devices", Toast.LENGTH_SHORT).show()*/
                     }
                 )
             }
