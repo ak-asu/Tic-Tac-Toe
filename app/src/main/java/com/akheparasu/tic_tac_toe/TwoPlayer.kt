@@ -15,6 +15,7 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.Intent
 import android.content.IntentFilter
+import android.util.Log
 import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,8 +38,35 @@ class TwoPlayer(private val context: Context) {
     private var bluetoothReceiver: BroadcastReceiver? = null
     //var deviceList: MutableList<BluetoothDevice> = mutableListOf()
     var deviceList = mutableStateOf<List<BluetoothDevice>>(listOf())
-        private set
+    var pairedDevicesList = mutableStateOf<List<BluetoothDevice>>(listOf())
 
+    // BroadcastReceiver to listen for paired/unpaired devices
+    private val bondStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val action = intent?.action
+            if (BluetoothDevice.ACTION_BOND_STATE_CHANGED == action) {
+                updatePairedDevices()  // Refresh paired devices list
+            }
+        }
+    }
+
+    init {
+        // Fetch initial paired devices
+        updatePairedDevices()
+
+        // Register BroadcastReceiver to listen for pairing/unpairing events
+        val filter = IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
+        context.registerReceiver(bondStateReceiver, filter)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun updatePairedDevices() {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+            pairedDevicesList.value = bluetoothAdapter?.bondedDevices?.toList() ?: emptyList()
+        } else {
+            Toast.makeText(context, "Bluetooth CONNECT permissions are not granted", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     @SuppressLint("MissingPermission")
     fun discoverBluetoothDevices() {
@@ -60,12 +88,23 @@ class TwoPlayer(private val context: Context) {
 
                     if (device != null && !deviceList.value.contains(device)) {
                         //deviceList.add(device)
-                        deviceList.value += device
+                        deviceList.value = deviceList.value + device
+                    }
+                }
+                if(BluetoothDevice.ACTION_ACL_DISCONNECTED == action) {
+                    val device: BluetoothDevice? = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                    if (device != null && deviceList.value.contains(device)) {
+                        // Remove the disconnected device
+                        deviceList.value = deviceList.value - device
                     }
                 }
             }
         }
-        val filter = IntentFilter(BluetoothDevice.ACTION_FOUND)
+        val filter = IntentFilter().apply {
+            addAction(BluetoothDevice.ACTION_FOUND)
+            addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
+            addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+        }
         context.registerReceiver(bluetoothReceiver, filter)
 
         // Start discovery
@@ -91,7 +130,7 @@ class TwoPlayer(private val context: Context) {
         bluetoothReceiver = null
     }
 
-    /*fun pairDevice(device: BluetoothDevice) {
+    fun pairDevice(device: BluetoothDevice) {
         if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(context, "Bluetooth permissions not granted", Toast.LENGTH_SHORT).show()
             return
@@ -105,7 +144,7 @@ class TwoPlayer(private val context: Context) {
         }
     }
 
-    fun connectToDevice(device: BluetoothDevice, activity: Activity) {
+    /*fun connectToDevice(device: BluetoothDevice, activity: Activity) {
         if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(activity, arrayOf(android.Manifest.permission.BLUETOOTH_CONNECT), REQUEST_CODE)
             return

@@ -34,6 +34,9 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import android.Manifest
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
+import android.content.Intent
 
 
 class MainActivity : ComponentActivity() {
@@ -116,5 +119,11 @@ class MainActivity : ComponentActivity() {
                 Manifest.permission.BLUETOOTH_CONNECT
             )
         )
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun enableBluetooth() {
+        val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+        startActivity(enableBtIntent)
     }
 }

@@ -44,20 +44,33 @@ fun BluetoothDeviceItem(device: BluetoothDevice, onClick: (BluetoothDevice) -> U
 fun AvailableDevicesScreen(twoPlayer: TwoPlayer, activity: Activity) {
     //val context = LocalContext.current
     val devices by twoPlayer.deviceList
+    val pairedDevices by twoPlayer.pairedDevicesList
     Column{
         Text("Available Bluetooth Devices",modifier = Modifier.padding(16.dp))
         LazyColumn {
             // Iterating through each device in the `devices` list
             items(devices) { device ->
-                // For each device, we display a BluetoothDeviceItem composable
+                // For each device, display a BluetoothDeviceItem
                 BluetoothDeviceItem(
                     device = device,
                     onClick = { selectedDevice -> // When the item is clicked, trigger the callback
                         // pair and connect the devices
-                        /*twoPlayer.pairDevice(selectedDevice)
+                        twoPlayer.pairDevice(selectedDevice)
 
-                        twoPlayer.connectToDevice(selectedDevice, activity)
+                        /*twoPlayer.connectToDevice(selectedDevice, activity)
                         Toast.makeText(context, "Attempting to pair and connect devices", Toast.LENGTH_SHORT).show()*/
+                    }
+                )
+            }
+        }
+        // Section for paired devices
+        Text("Paired Bluetooth Devices", modifier = Modifier.padding(16.dp))
+        LazyColumn {
+            items(pairedDevices) { pairedDevice ->
+                BluetoothDeviceItem(
+                    device = pairedDevice,
+                    onClick = { selectedDevice ->
+                        // Handle paired device click (e.g., connect to the device)
                     }
                 )
             }
