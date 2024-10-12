@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -42,12 +43,12 @@ fun BluetoothDeviceItem(device: BluetoothDevice, onClick: (BluetoothDevice) -> U
 @Composable
 fun AvailableDevicesScreen(twoPlayer: TwoPlayer, activity: Activity) {
     //val context = LocalContext.current
+    val devices by twoPlayer.deviceList
     Column{
         Text("Available Bluetooth Devices",modifier = Modifier.padding(16.dp))
-
         LazyColumn {
             // Iterating through each device in the `devices` list
-            items(twoPlayer.deviceList) { device ->
+            items(devices) { device ->
                 // For each device, we display a BluetoothDeviceItem composable
                 BluetoothDeviceItem(
                     device = device,

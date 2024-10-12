@@ -23,6 +23,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.UUID
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 class TwoPlayer(private val context: Context) {
     private val bluetoothManager by lazy{
@@ -32,7 +35,9 @@ class TwoPlayer(private val context: Context) {
         bluetoothManager?.adapter
     }
     private var bluetoothReceiver: BroadcastReceiver? = null
-    var deviceList: MutableList<BluetoothDevice> = mutableListOf()
+    //var deviceList: MutableList<BluetoothDevice> = mutableListOf()
+    var deviceList = mutableStateOf<List<BluetoothDevice>>(listOf())
+        private set
 
 
     @SuppressLint("MissingPermission")
@@ -53,8 +58,9 @@ class TwoPlayer(private val context: Context) {
                 if (BluetoothDevice.ACTION_FOUND == action){
                     val device: BluetoothDevice? = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
 
-                    if (device != null && !deviceList.contains(device)) {
-                        deviceList.add(device)
+                    if (device != null && !deviceList.value.contains(device)) {
+                        //deviceList.add(device)
+                        deviceList.value += device
                     }
                 }
             }
