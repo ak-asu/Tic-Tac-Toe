@@ -94,20 +94,32 @@ fun GameScreen(gameMode: Boolean) {
                         else{
                             if (playerTurn) {
                                 grid[i][j] = "X"
-                                //Check for the win condition
                                 playerTurn = false
+                                //Check for the win condition
+                                if(checkWinner(grid).equals("X")) {
+                                    Toast.makeText(context, "PLAYER X WINS!!!", Toast.LENGTH_SHORT).show()
+                                }
                             }
                             else {
                                 //Player 2 Game Mode
                                 if(player2.value){
                                     grid[i][j] = "O"
-                                    //Check for the win condition
                                     playerTurn = true
+                                    //Check for the win condition
+                                    if(checkWinner(grid).equals("O")) {
+                                        Toast.makeText(context, "PLAYER O WINS!!!", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                                 //Computer Game Mode
                                 else {
                                     Log.i("someTag", "We will have computer take their turn")
                                     //Check for the win condition
+
+                                    if(checkWinner(grid).equals("O")) {
+                                        Toast.makeText(context, "PLAYER O WINS!!!", Toast.LENGTH_SHORT).show()
+                                    } else if (checkWinner(grid).equals("X")) {
+                                        Toast.makeText(context, "PLAYER X WINS!!!", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             }
                         }
@@ -118,7 +130,14 @@ fun GameScreen(gameMode: Boolean) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Button(onClick = { /* Reset Game Logic */ }) {
+        Button(onClick = {
+            for (i in 0 until gridSize) {
+                for (j in 0 until gridSize) {
+                    grid[i][j] = ""
+                }
+            }
+            playerTurn = true
+        }) {
             Text(text = "Reset Game")
         }
     }
@@ -155,4 +174,34 @@ suspend fun runOpponentTurn(grid: Array<Array<String>>, count:Int): Array<Array<
 
     delay(1000)
     return grid
+}
+
+// This function checks all of the possibilities of a win and returns "X" or "O" depending on who won
+fun checkWinner(grid: Array<Array<String>>): String? {
+    // List all of the possible ways to win
+    val winningCombinations = listOf(
+        listOf(Pair(0, 0), Pair(0, 1), Pair(0, 2)), // Row 1
+        listOf(Pair(1, 0), Pair(1, 1), Pair(1, 2)), // Row 2
+        listOf(Pair(2, 0), Pair(2, 1), Pair(2, 2)), // Row 3
+        listOf(Pair(0, 0), Pair(1, 0), Pair(2, 0)), // Column 1
+        listOf(Pair(0, 1), Pair(1, 1), Pair(2, 1)), // Column 2
+        listOf(Pair(0, 2), Pair(1, 2), Pair(2, 2)), // Column 3
+        listOf(Pair(0, 0), Pair(1, 1), Pair(2, 2)), // Diagonal top-left to bottom-right
+        listOf(Pair(0, 2), Pair(1, 1), Pair(2, 0))  // Diagonal top-right to bottom-left
+    )
+
+    // Check if any winning combination is met
+    for (combination in winningCombinations) {
+        val (first, second, third) = combination
+        val (i1, j1) = first
+        val (i2, j2) = second
+        val (i3, j3) = third
+
+        // Return X or O
+        if (grid[i1][j1] == grid[i2][j2] && grid[i2][j2] == grid[i3][j3] && grid[i1][j1].isNotEmpty()) {
+            return grid[i1][j1]
+        }
+    }
+    // Return null if no one has won
+    return null
 }
