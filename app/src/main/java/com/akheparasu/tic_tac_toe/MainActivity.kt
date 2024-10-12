@@ -39,6 +39,7 @@ import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
+import com.akheparasu.tic_tac_toe.TwoPlayer
 
 class MainActivity : ComponentActivity() {
     private val settingsDataStore by lazy { SettingsDataStore(this) }
@@ -123,7 +124,6 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                 }
-                            }
                             composable("score") {
                                 ScoreScreen()
                             }
