@@ -12,6 +12,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.akheparasu.tic_tac_toe.screens.CareerScreen
@@ -26,6 +27,7 @@ import com.akheparasu.tic_tac_toe.settings.SettingsDataStore
 import com.akheparasu.tic_tac_toe.ui.AppBar
 import com.akheparasu.tic_tac_toe.ui.theme.TicTacToeTheme
 import com.akheparasu.tic_tac_toe.TwoPlayer
+import com.akheparasu.tic_tac_toe.screens.AvailableDevicesScreen
 
 class MainActivity : ComponentActivity() {
     private val settingsDataStore by lazy { SettingsDataStore(this) }
@@ -70,6 +72,9 @@ class MainActivity : ComponentActivity() {
                             }
                             composable("career") {
                                 CareerScreen(careerViewModel)
+                            }
+                            composable("available_devices") {
+                                AvailableDevicesScreen(twoPlayer = TwoPlayer(LocalContext.current), activity = this@MainActivity)
                             }
                         }
                     }

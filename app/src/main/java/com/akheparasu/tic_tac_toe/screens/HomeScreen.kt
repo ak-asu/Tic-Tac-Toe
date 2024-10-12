@@ -33,11 +33,11 @@ fun HomeScreen() {
         }
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { navController?.navigate("game/${true}") }) {
-            Text(text = "Play against Player")
+            Text(text = "Play against another Player on 1 device")
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { /* Placeholder for online multiplayer */ }) {
-            Text(text = "Play Online (Coming Soon)")
+        Button(onClick = { navController?.navigate("available_devices") }) {
+            Text(text = "Play against another player using bluetooth")
         }
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { navController?.navigate("career") }) {

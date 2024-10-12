@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.core.android)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.identity.jvm)
     ksp(libs.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

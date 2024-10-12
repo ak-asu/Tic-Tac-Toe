@@ -17,12 +17,7 @@ import android.widget.Toast
 class TwoPlayer(private val context: Context) {
     private val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
     private var bluetoothReceiver: BroadcastReceiver? = null
-    private var deviceList: MutableList<BluetoothDevice> = mutableListOf()
-    private var deviceDisplayList: MutableList<String> = mutableListOf()
-
-    fun chooseMultiplayerOptionsScreen() {
-
-    }
+    var deviceList: MutableList<BluetoothDevice> = mutableListOf()
 
     fun requestPermissions(activity: Activity, requestCode: Int) {
         val permissions = arrayOf(
@@ -58,7 +53,9 @@ class TwoPlayer(private val context: Context) {
                         Toast.makeText(context, "Bluetooth permissions are not granted", Toast.LENGTH_SHORT).show()
                         return
                     }
-                    deviceList.add(device!!)
+                    if (device != null && !deviceList.contains(device)) {
+                        deviceList.add(device)
+                    }
                 }
             }
         }
