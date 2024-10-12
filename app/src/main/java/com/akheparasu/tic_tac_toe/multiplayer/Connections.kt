@@ -1,6 +1,5 @@
 package com.akheparasu.tic_tac_toe.multiplayer
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -11,15 +10,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.gson.Gson
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withContext
 import java.io.InputStream
 import java.io.OutputStream
-import java.util.*
+import java.util.UUID
 
 class Connections(private val context: Context) {
 
@@ -30,7 +29,10 @@ class Connections(private val context: Context) {
     val connectedDevice: StateFlow<BluetoothDevice?> = _connectedDevice
 
     fun registerReceiver() {
-        context.registerReceiver(bluetoothReceiver, IntentFilter(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED))
+        context.registerReceiver(
+            bluetoothReceiver,
+            IntentFilter(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
+        )
     }
 
     fun unregisterReceiver() {
@@ -41,10 +43,10 @@ class Connections(private val context: Context) {
         if (bluetoothSocket == null) {
             return
         }
-            val outputStream: OutputStream = bluetoothSocket!!.outputStream
-            val data = serializeGameData(dataModel)
-            outputStream.write(data.toByteArray())
-            outputStream.flush()
+        val outputStream: OutputStream = bluetoothSocket!!.outputStream
+        val data = serializeGameData(dataModel)
+        outputStream.write(data.toByteArray())
+        outputStream.flush()
     }
 
     suspend fun receiveData(onDataReceived: (DataModel) -> Unit) = withContext(Dispatchers.IO) {
@@ -52,22 +54,23 @@ class Connections(private val context: Context) {
             return@withContext
         }
         val inputStream: InputStream = bluetoothSocket!!.inputStream
-            try {
-                val buffer = ByteArray(1024)
-                val bytes = inputStream.read(buffer)
-                val data = String(buffer, 0, bytes)
-                val message = deserializeGameData(data)
-                withContext(Dispatchers.Main) {
-                    onDataReceived(message)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
+        try {
+            val buffer = ByteArray(1024)
+            val bytes = inputStream.read(buffer)
+            val data = String(buffer, 0, bytes)
+            val message = deserializeGameData(data)
+            withContext(Dispatchers.Main) {
+                onDataReceived(message)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
     fun getMissingPermissions(): Array<String> {
         val packageManager = context.packageManager
-        val packageInfo = packageManager.getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)
+        val packageInfo =
+            packageManager.getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)
         val allPermissions = packageInfo.requestedPermissions ?: emptyArray()
         val missingPermissions = allPermissions.filter {
             ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
@@ -99,7 +102,8 @@ class Connections(private val context: Context) {
                     val bondedDevices = bluetoothAdapter.bondedDevices
                     for (device in bondedDevices) {
                         // This is a simple check; you may need to adapt it to your specific use case
-                        val deviceStatus = bluetoothAdapter.getProfileConnectionState(BluetoothProfile.HEADSET)
+                        val deviceStatus =
+                            bluetoothAdapter.getProfileConnectionState(BluetoothProfile.HEADSET)
                         if (deviceStatus == BluetoothProfile.STATE_CONNECTED) {
                             bluetoothSocket?.close()
                             val uuid: UUID = device.uuids[0].uuid

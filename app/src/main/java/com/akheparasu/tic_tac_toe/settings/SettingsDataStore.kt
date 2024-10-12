@@ -3,7 +3,11 @@ package com.akheparasu.tic_tac_toe.settings
 import android.content.Context
 import android.content.res.Configuration
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.akheparasu.tic_tac_toe.utils.DEFAULT_GRID_SIZE
 import com.akheparasu.tic_tac_toe.utils.DEFAULT_VOLUME
@@ -24,14 +28,17 @@ class SettingsDataStore(private val context: Context) {
 
     val difficultyFlow: Flow<Difficulty> = context.dataStore.data
         .map { preferences ->
-            val level = preferences[PreferencesKeys.DIFFICULTY] ?: Difficulty.Easy.getDifficultyLevel()
+            val level =
+                preferences[PreferencesKeys.DIFFICULTY] ?: Difficulty.Easy.getDifficultyLevel()
             Difficulty.fromLevel(level)
         }
 
     val darkThemeFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
-            val currentMode = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-            preferences[PreferencesKeys.DARK_THEME] ?: (currentMode == Configuration.UI_MODE_NIGHT_YES)
+            val currentMode =
+                context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+            preferences[PreferencesKeys.DARK_THEME]
+                ?: (currentMode == Configuration.UI_MODE_NIGHT_YES)
         }
 
     val volumeFlow: Flow<Float> = context.dataStore.data
