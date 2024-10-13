@@ -1,12 +1,18 @@
 package com.akheparasu.tic_tac_toe
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,7 +22,6 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -24,7 +29,10 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.akheparasu.tic_tac_toe.audio.AudioPlayer
+import com.akheparasu.tic_tac_toe.multiplayer.DevicesScreen
 import com.akheparasu.tic_tac_toe.multiplayer.Connections
+import com.akheparasu.tic_tac_toe.multiplayer.TwoPlayer
 import com.akheparasu.tic_tac_toe.screens.CareerScreen
 import com.akheparasu.tic_tac_toe.screens.CareerViewModel
 import com.akheparasu.tic_tac_toe.screens.CareerViewModelFactory
@@ -34,26 +42,16 @@ import com.akheparasu.tic_tac_toe.screens.ScoreScreen
 import com.akheparasu.tic_tac_toe.settings.SettingsDataStore
 import com.akheparasu.tic_tac_toe.ui.AppBar
 import com.akheparasu.tic_tac_toe.ui.theme.TicTacToeTheme
-import com.akheparasu.tic_tac_toe.utils.DEFAULT_GRID_SIZE
 import com.akheparasu.tic_tac_toe.utils.GameMode
+import com.akheparasu.tic_tac_toe.utils.LocalAudioPlayer
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
-import com.akheparasu.tic_tac_toe.TwoPlayer
-import com.akheparasu.tic_tac_toe.screens.AvailableDevicesScreen
-import android.app.Activity
-import android.content.pm.PackageManager
-import android.widget.Toast
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
-import android.Manifest
-import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
-import android.content.Intent
 
 
 class MainActivity : ComponentActivity() {
     private val settingsDataStore by lazy { SettingsDataStore(this) }
+    private val audioPlayerContext by lazy { AudioPlayer(this) }
     private lateinit var twoPlayer: TwoPlayer
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var connectionService: Connections
@@ -70,7 +68,8 @@ class MainActivity : ComponentActivity() {
             if (allGranted) {
                 twoPlayer.discoverBluetoothDevices() // Start discovering devices if all permissions are granted
             } else {
-                Toast.makeText(this, "Bluetooth permissions are not granted", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Bluetooth permissions are not granted", Toast.LENGTH_SHORT)
+                    .show()
             }
         }
 
@@ -87,6 +86,7 @@ class MainActivity : ComponentActivity() {
                 LocalNavController provides navController,
                 LocalSettings provides settingsDataStore,
                 LocalConnectionService provides connectionService,
+                LocalAudioPlayer provides audioPlayerContext,
             ) {
                 TicTacToeTheme {
                     Scaffold(
@@ -137,29 +137,22 @@ class MainActivity : ComponentActivity() {
                                             } else {
                                                 GameScreen(
                                                     gameMode,
-                                                    settingsDataStore.gridSizeFlow.collectAsState(
-                                                        initial = DEFAULT_GRID_SIZE
-                                                    ).value,
                                                     originalConnectedDevice
                                                 )
                                             }
                                         }
                                     } else {
-                                        GameScreen(
-                                            gameMode,
-                                            settingsDataStore.gridSizeFlow.collectAsState(initial = DEFAULT_GRID_SIZE).value,
-                                            originalConnectedDevice
-                                        )
+                                        GameScreen(gameMode, originalConnectedDevice)
                                     }
                                 }
-                            composable("score") {
-                                ScoreScreen()
                             }
-                            composable("career") {
-                                CareerScreen(careerViewModel)
-                            }
-                            composable("available_devices") {
-                                AvailableDevicesScreen(twoPlayer = twoPlayer, activity = this@MainActivity)
+                            composable("score") { ScoreScreen() }
+                            composable("career") { CareerScreen(careerViewModel) }
+                            composable("devices") {
+                                DevicesScreen(
+                                    twoPlayer = twoPlayer,
+                                    activity = this@MainActivity
+                                )
                             }
                         }
                     }
@@ -184,6 +177,7 @@ class MainActivity : ComponentActivity() {
     private fun enableBluetooth() {
         val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
         startActivity(enableBtIntent)
+    }
 
     override fun onStart() {
         super.onStart()

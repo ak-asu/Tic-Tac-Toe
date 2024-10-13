@@ -30,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -44,12 +43,10 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import com.akheparasu.tic_tac_toe.utils.DEFAULT_GRID_SIZE
 import com.akheparasu.tic_tac_toe.utils.DEFAULT_VOLUME
 import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
-import com.akheparasu.tic_tac_toe.utils.MAX_GRID_SIZE
-import com.akheparasu.tic_tac_toe.utils.MIN_GRID_SIZE
+import com.akheparasu.tic_tac_toe.utils.Preference
 import kotlinx.coroutines.launch
 
 @Composable
@@ -69,7 +66,8 @@ fun SettingsDialog() {
                     DifficultySelector()
                     VolumeSlider()
                     ThemeToggle()
-                    GridMenu()
+                    PlayerPrefMenu()
+                    OnlinePrefMenu()
                 }
             },
             confirmButton = { }
@@ -176,12 +174,12 @@ fun ThemeToggle() {
 }
 
 @Composable
-fun GridMenu() {
+fun PlayerPrefMenu() {
     val settingsDataStore = LocalSettings.current
     val coroutineScope = rememberCoroutineScope()
 
-    val gridOptions = (MIN_GRID_SIZE..MAX_GRID_SIZE).toList()
-    var selectedGridSize by remember { mutableIntStateOf(DEFAULT_GRID_SIZE) }
+    val options = Preference.entries.toList()
+    var selectedOption by remember { mutableStateOf(Preference.AskEveryTime) }
     var expanded by rememberSaveable { mutableStateOf(false) }
     var pressOffset by remember { mutableStateOf(DpOffset.Zero) }
     var itemHeight by remember { mutableStateOf(0.dp) }
@@ -189,8 +187,8 @@ fun GridMenu() {
     val density = LocalDensity.current
 
     LaunchedEffect(Unit) {
-        settingsDataStore.gridSizeFlow.collect { gridSize ->
-            selectedGridSize = gridSize
+        settingsDataStore.playerPrefFlow.collect { playerPref ->
+            selectedOption = playerPref
         }
     }
 
@@ -224,7 +222,7 @@ fun GridMenu() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(text = "Grid dimension ", modifier = Modifier.padding(8.dp))
-                Text(text = selectedGridSize.toString(), modifier = Modifier.padding(8.dp))
+                Text(text = selectedOption.name, modifier = Modifier.padding(8.dp))
             }
         }
         DropdownMenu(
@@ -234,14 +232,87 @@ fun GridMenu() {
                 y = pressOffset.y - itemHeight
             )
         ) {
-            gridOptions.forEach {
+            options.forEach {
                 DropdownMenuItem(onClick = {
-                    selectedGridSize = it
+                    selectedOption = it
                     coroutineScope.launch {
-                        settingsDataStore.saveGridSize(it)
+                        settingsDataStore.savePlayerPref(it)
                     }
                     expanded = false
-                }, text = { Text(text = it.toString()) }
+                }, text = { Text(text = it.name) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun OnlinePrefMenu() {
+    val settingsDataStore = LocalSettings.current
+    val coroutineScope = rememberCoroutineScope()
+
+    val options = Preference.entries.toList()
+    var selectedOption by remember { mutableStateOf(Preference.AskEveryTime) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    var pressOffset by remember { mutableStateOf(DpOffset.Zero) }
+    var itemHeight by remember { mutableStateOf(0.dp) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val density = LocalDensity.current
+
+    LaunchedEffect(Unit) {
+        settingsDataStore.onlinePrefFlow.collect { onlinePref ->
+            selectedOption = onlinePref
+        }
+    }
+
+    Card(
+        modifier = Modifier
+            .padding(4.dp)
+            .onSizeChanged {
+                itemHeight = with(density) { it.height.toDp() }
+            }
+    ) {
+        Box(
+            modifier = Modifier
+                .height(64.dp)
+                .indication(interactionSource, LocalIndication.current)
+                .pointerInput(true) {
+                    detectTapGestures(
+                        onPress = {
+                            expanded = !expanded
+                            pressOffset = DpOffset(it.x.toDp(), it.y.toDp())
+                            val press = PressInteraction.Press(it)
+                            interactionSource.emit(press)
+                            tryAwaitRelease()
+                            interactionSource.emit(PressInteraction.Release(press))
+                        }
+                    )
+                }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Grid dimension ", modifier = Modifier.padding(8.dp))
+                Text(text = selectedOption.name, modifier = Modifier.padding(8.dp))
+            }
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            offset = pressOffset.copy(
+                y = pressOffset.y - itemHeight
+            )
+        ) {
+            options.forEach {
+                DropdownMenuItem(onClick = {
+                    selectedOption = it
+                    coroutineScope.launch {
+                        settingsDataStore.saveOnlinePref(it)
+                    }
+                    expanded = false
+                }, text = { Text(text = it.name) }
                 )
             }
         }

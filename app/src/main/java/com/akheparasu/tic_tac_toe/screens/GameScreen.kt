@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -29,6 +30,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.akheparasu.tic_tac_toe.algorithms.runAITurn
+import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
@@ -38,20 +41,11 @@ import kotlinx.coroutines.delay
 @Composable
 fun GameScreen(
     gameMode: GameMode,
-    gridSize: Int,
     originalConnectedDevice: BluetoothDevice?
 ) {
     val context = LocalContext.current
     val settings = LocalSettings.current
-    val difficultyFlow = settings.difficultyFlow.collectAsState(initial = null)
-    if (difficultyFlow.value == null) {
-        return Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
-        }
-    }
+    val difficultyFlow = settings.difficultyFlow.collectAsState(initial = Difficulty.Easy)
 //    val gridSaver = Saver<List<List<String>>, ArrayList<ArrayList<String>>>(
 //        save = { grid ->
 //            ArrayList(grid.map { ArrayList(it) })
@@ -60,7 +54,7 @@ fun GameScreen(
 //            saved.map { it.toList() }
 //        }
 //    )
-    var grid by rememberSaveable { mutableStateOf(Array(gridSize) { Array(gridSize) { "" } }) }
+    var grid by rememberSaveable { mutableStateOf(Array(3) { Array(3) { "" } }) }
     var playerTurn by rememberSaveable { mutableStateOf(true) }
 
     val isGameComplete: (Array<Array<String>>) -> Boolean =
@@ -71,26 +65,20 @@ fun GameScreen(
     } else {
         null
     }
-    val player2 = rememberSaveable { mutableStateOf(gameMode) }
-    val isGameComplete: (Array<Array<String>>) -> Boolean = { !it.any { c -> c.any { v -> v.isEmpty() } } }
+    val player2 = rememberSaveable { mutableStateOf(false) }
 
     //THIS IS FOR DEVELOPMENT (CAN REMOVE AFTER)
     var count by rememberSaveable { mutableIntStateOf(0) }
 
     LaunchedEffect(playerTurn) {
-        if (!playerTurn && !player2.value) {
+        if (!playerTurn && player2.value) {
             grid = async { runOpponentTurn(grid, count)}.await()
-
+            runAITurn(grid, difficultyFlow.value)
             count += 1
 
             //check if game complete
 
             playerTurn = true
-        }
-    }
-    LaunchedEffect(gridSize) {
-        if (gridSize != grid.size) {
-            grid = Array(gridSize) { Array(gridSize) { "" } }
         }
     }
     LaunchedEffect(connectedDevice) { }
@@ -106,9 +94,9 @@ fun GameScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        for (i in 0 until gridSize) {
+        for (i in 0 until 3) {
             Row {
-                for (j in 0 until gridSize) {
+                for (j in 0 until 3) {
                     GridCell(value = grid[i][j], onTap = {
                         if(grid[i][j].isNotEmpty()){
                             Toast.makeText(context, "That spot has already been selected!", Toast.LENGTH_SHORT).show()
@@ -153,8 +141,8 @@ fun GameScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(onClick = {
-            for (i in 0 until gridSize) {
-                for (j in 0 until gridSize) {
+            for (i in 0 until 3) {
+                for (j in 0 until 3) {
                     grid[i][j] = ""
                 }
             }
@@ -184,13 +172,13 @@ fun GridCell(value: String, onTap: () -> Unit) {
 
 suspend fun runOpponentTurn(grid: Array<Array<String>>, count:Int): Array<Array<String>> {
     //This is for testing if computer turn works
-    if(count == 0){
+    if (count == 0) {
         grid[0][0] = "O"
     }
-    else if(count == 1){
+    else if (count == 1) {
         grid[0][1] = "O"
     }
-    else{
+    else {
         grid[0][2] = "O"
     }
 

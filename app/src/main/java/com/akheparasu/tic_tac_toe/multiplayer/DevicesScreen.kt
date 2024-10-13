@@ -1,11 +1,10 @@
-package com.akheparasu.tic_tac_toe.screens
+package com.akheparasu.tic_tac_toe.multiplayer
 
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.BluetoothDevice
 import android.content.pm.PackageManager
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -15,12 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.akheparasu.tic_tac_toe.TwoPlayer
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,28 +29,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.app.ActivityCompat
-import com.android.identity.cbor.Uint
-
-
-@Composable
-fun BluetoothDeviceItem(device: BluetoothDevice, onClick: (BluetoothDevice) -> Unit) {
-    val context = LocalContext.current
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick(device) }.padding(8.dp),
-    ) {
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-            Text(
-                text = device.name ?: "Unknown Device",
-                modifier = Modifier.padding(16.dp)
-            )
-        }
-    }
-}
 
 
 @SuppressLint("MissingPermission")
 @Composable
-fun AvailableDevicesScreen(twoPlayer: TwoPlayer, activity: Activity) {
+fun DevicesScreen(twoPlayer: TwoPlayer, activity: Activity) {
     //val context = LocalContext.current
     val devices by twoPlayer.deviceList
     val pairedDevices by twoPlayer.pairedDevicesList
@@ -154,4 +134,19 @@ fun WhoGoesFirst(
         properties = DialogProperties()
     )
 
+}
+
+@Composable
+fun BluetoothDeviceItem(device: BluetoothDevice, onClick: (BluetoothDevice) -> Unit) {
+    val context = LocalContext.current
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onClick(device) }.padding(8.dp),
+    ) {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+            Text(
+                text = device.name ?: "Unknown Device",
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    }
 }
