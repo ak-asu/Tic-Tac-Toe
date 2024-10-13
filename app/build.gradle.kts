@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("com.google.devtools.ksp")
+    id("com.google.dagger.hilt.android")
+    id("kotlin-kapt")
 }
 
 android {
@@ -45,7 +47,7 @@ android {
     }
     packaging {
         resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
     }
 }
@@ -67,6 +69,8 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.core.android)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.identity.jvm)
+    implementation(libs.play.services.basement)
     implementation(libs.gson)
     implementation(libs.androidx.media)
     ksp(libs.room.compiler)
@@ -77,4 +81,19 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+
+    //bluetooth dependencies
+
+    implementation(libs.androidx.hilt.navigation.compose)
+    //implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation(libs.hilt.android)
+    //implementation("com.google.dagger:hilt-android:2.45")
+    kapt(libs.hilt.android.compiler)
+    //kapt("com.google.dagger:hilt-android-compiler:2.45")
+    kapt(libs.androidx.hilt.compiler)
+    //kapt ("androidx.hilt:hilt-compiler:1.2.0")
+    implementation(libs.androidx.activity.ktx)
+
+
 }
