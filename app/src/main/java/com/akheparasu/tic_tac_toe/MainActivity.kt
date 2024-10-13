@@ -40,9 +40,12 @@ import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
 import com.akheparasu.tic_tac_toe.TwoPlayer
+import com.akheparasu.tic_tac_toe.audio.AudioPlayer
+import com.akheparasu.tic_tac_toe.utils.LocalAudioPlayer
 
 class MainActivity : ComponentActivity() {
     private val settingsDataStore by lazy { SettingsDataStore(this) }
+    private val audioPlayerContext by lazy { AudioPlayer(this) }
     private lateinit var connectionService: Connections
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,6 +62,7 @@ class MainActivity : ComponentActivity() {
                 LocalNavController provides navController,
                 LocalSettings provides settingsDataStore,
                 LocalConnectionService provides connectionService,
+                LocalAudioPlayer provides audioPlayerContext,
             ) {
                 TicTacToeTheme {
                     Scaffold(
@@ -124,26 +128,27 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                 }
-                            composable("score") {
-                                ScoreScreen()
-                            }
-                            composable("career") {
-                                CareerScreen(careerViewModel)
+                                }
+                                composable("score") {
+                                    ScoreScreen()
+                                }
+                                composable("career") {
+                                    CareerScreen(careerViewModel)
+                                }
                             }
                         }
                     }
                 }
             }
         }
-    }
 
-    override fun onStart() {
-        super.onStart()
-        connectionService.registerReceiver()
-    }
+        override fun onStart() {
+            super.onStart()
+            connectionService.registerReceiver()
+        }
 
-    override fun onStop() {
-        super.onStop()
-        connectionService.unregisterReceiver()
+        override fun onStop() {
+            super.onStop()
+            connectionService.unregisterReceiver()
+        }
     }
-}

@@ -80,7 +80,7 @@ fun GameScreen(
     LaunchedEffect(playerTurn) {
         if (!playerTurn && !player2.value) {
             grid = async { runOpponentTurn(grid, count)}.await()
-
+            runAITurn(grid, diff)
             count += 1
 
             //check if game complete
@@ -184,13 +184,13 @@ fun GridCell(value: String, onTap: () -> Unit) {
 
 suspend fun runOpponentTurn(grid: Array<Array<String>>, count:Int): Array<Array<String>> {
     //This is for testing if computer turn works
-    if(count == 0){
+    if (count == 0) {
         grid[0][0] = "O"
     }
-    else if(count == 1){
+    else if (count == 1) {
         grid[0][1] = "O"
     }
-    else{
+    else {
         grid[0][2] = "O"
     }
 
