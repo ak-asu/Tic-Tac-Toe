@@ -1,9 +1,7 @@
 package com.akheparasu.tic_tac_toe.screens
 
 import android.app.Application
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.Text
@@ -47,7 +45,7 @@ fun CareerScreen(careerViewModel: CareerViewModel) {
             Card {
                 DisplayText("Date: ", records[record].date.toString())
                 DisplayText("Winner: ", records[record].winner.toString())
-                DisplayText("Difficulty: ", records[record].difficulty?.name ?: "-")
+                DisplayText("Difficulty: ",records[record].difficulty?.name ?: "-")
             }
         }
     }

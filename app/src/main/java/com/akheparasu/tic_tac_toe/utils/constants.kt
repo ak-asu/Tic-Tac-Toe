@@ -1,5 +1,7 @@
 package com.akheparasu.tic_tac_toe.utils
 
+import androidx.compose.ui.graphics.Color
+
 const val DEFAULT_VOLUME = 1.0f
 const val DEFAULT_GRID_SIZE = 3
 const val MIN_GRID_SIZE = 3
@@ -14,6 +16,14 @@ enum class Difficulty(private val level: Int) {
 
     fun getDifficultyLevel(): Int {
         return level
+    }
+
+    fun getColor(): Color {
+        return when (this) {
+            Easy -> Color.Green
+            Medium -> Color.Yellow
+            Hard -> Color.Red
+        }
     }
 
     companion object {
@@ -32,4 +42,10 @@ enum class Player {
     Human,
     Computer,
     Challenger;
+}
+
+enum class GameMode {
+    Computer,
+    Human,
+    Online;
 }

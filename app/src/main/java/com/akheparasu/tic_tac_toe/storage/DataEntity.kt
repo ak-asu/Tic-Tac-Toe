@@ -3,7 +3,8 @@ package com.akheparasu.tic_tac_toe.storage
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.akheparasu.tic_tac_toe.utils.*
+import com.akheparasu.tic_tac_toe.utils.Difficulty
+import com.akheparasu.tic_tac_toe.utils.Player
 import java.util.Date
 
 @Entity(tableName = "career_table")

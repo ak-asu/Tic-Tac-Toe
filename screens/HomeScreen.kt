@@ -13,14 +13,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 
 
 @Composable
 fun HomeScreen() {
     val navController = LocalNavController.current
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -28,16 +26,18 @@ fun HomeScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Button(onClick = { navController?.navigate("game/${GameMode.Computer.name}") }) {
+        Button(onClick = {
+
+            navController?.navigate("game/${false}") }){
             Text(text = "Play against Computer")
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { navController?.navigate("game/${GameMode.Human.name}") }) {
+        Button(onClick = { navController?.navigate("game/${true}") }) {
             Text(text = "Play against Player")
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { navController?.navigate("game/${GameMode.Online.name}") }) {
-            Text(text = "Play Online")
+        Button(onClick = { /* Placeholder for online multiplayer */ }) {
+            Text(text = "Play Online (Coming Soon)")
         }
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { navController?.navigate("career") }) {
