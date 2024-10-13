@@ -30,9 +30,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.akheparasu.tic_tac_toe.audio.AudioPlayer
-import com.akheparasu.tic_tac_toe.multiplayer.DevicesScreen
 import com.akheparasu.tic_tac_toe.multiplayer.Connections
-import com.akheparasu.tic_tac_toe.multiplayer.TwoPlayer
 import com.akheparasu.tic_tac_toe.screens.CareerScreen
 import com.akheparasu.tic_tac_toe.screens.CareerViewModel
 import com.akheparasu.tic_tac_toe.screens.CareerViewModelFactory
@@ -52,29 +50,11 @@ import com.akheparasu.tic_tac_toe.utils.LocalSettings
 class MainActivity : ComponentActivity() {
     private val settingsDataStore by lazy { SettingsDataStore(this) }
     private val audioPlayerContext by lazy { AudioPlayer(this) }
-    private lateinit var twoPlayer: TwoPlayer
-    private lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var connectionService: Connections
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        twoPlayer = TwoPlayer(this)
-
-        requestPermissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions()
-        ) { permissions ->
-            val allGranted = permissions.values.all { it }
-            if (allGranted) {
-                twoPlayer.discoverBluetoothDevices() // Start discovering devices if all permissions are granted
-            } else {
-                Toast.makeText(this, "Bluetooth permissions are not granted", Toast.LENGTH_SHORT)
-                    .show()
-            }
-        }
-
-        requestPermissions()
-
         val careerViewModel: CareerViewModel by viewModels {
             CareerViewModelFactory(application)
         }
@@ -148,12 +128,6 @@ class MainActivity : ComponentActivity() {
                             }
                             composable("score") { ScoreScreen() }
                             composable("career") { CareerScreen(careerViewModel) }
-                            composable("devices") {
-                                DevicesScreen(
-                                    twoPlayer = twoPlayer,
-                                    activity = this@MainActivity
-                                )
-                            }
                         }
                     }
                 }
@@ -161,31 +135,24 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun requestPermissions() {
-        requestPermissionLauncher.launch(
-            arrayOf(
-                Manifest.permission.BLUETOOTH,
-                Manifest.permission.BLUETOOTH_ADMIN,
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT
-            )
-        )
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun enableBluetooth() {
-        val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-        startActivity(enableBtIntent)
-    }
-
-    override fun onStart() {
-        super.onStart()
-        connectionService.registerReceiver()
-    }
+//    @SuppressLint("MissingPermission")
+//    private fun enableBluetooth() {
+//        val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+//        startActivity(enableBtIntent)
+//    }
 
     override fun onStop() {
         super.onStop()
+        connectionService.unregisterReceiver()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        connectionService.registerReceiver()
+    }
+
+    override fun onPause() {
+        super.onPause()
         connectionService.unregisterReceiver()
     }
 }

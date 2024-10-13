@@ -69,3 +69,17 @@ enum class Preference(private val id: Int) {
         }
     }
 }
+
+enum class GridEntry {
+    X,
+    O,
+    E;
+
+    fun getDisplayText(): String {
+        return when (this) {
+            X -> "X"
+            O -> "O"
+            E -> ""
+        }
+    }
+}

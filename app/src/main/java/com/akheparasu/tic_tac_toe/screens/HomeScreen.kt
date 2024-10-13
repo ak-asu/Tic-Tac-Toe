@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.akheparasu.tic_tac_toe.multiplayer.DevicesDialog
 import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
@@ -30,7 +31,6 @@ fun HomeScreen() {
     val showPrefDialog = remember { mutableStateOf(false) }
     val gameMode = remember { mutableStateOf<GameMode?>(null) }
     val playerPrefFlow = settings.playerPrefFlow.collectAsState(initial = Preference.AskEveryTime)
-    val onlinePrefFlow = settings.onlinePrefFlow.collectAsState(initial = Preference.AskEveryTime)
 
     Column(
         modifier = Modifier
@@ -78,6 +78,14 @@ fun HomeScreen() {
                 confirmButton = { }
             )
         }
+        if (showDevicesDialog.value) {
+            DevicesDialog(
+                onDismiss = { showDevicesDialog.value = false },
+                onDeviceSelected = { device, pref ->
+                    navController?.navigate(getGamePath(GameMode.Online, pref))
+                }
+            )
+        }
         Button(onClick = {
             gameMode.value = GameMode.Computer
             if (playerPrefFlow.value == Preference.AskEveryTime) {
@@ -98,11 +106,8 @@ fun HomeScreen() {
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = {
             gameMode.value = GameMode.Online
-            if (onlinePrefFlow.value == Preference.AskEveryTime) {
-                showPrefDialog.value = true
-            } else {
-                navController?.navigate(getGamePath(gameMode.value!!, onlinePrefFlow.value))
-            }
+            showDevicesDialog.value = true
+            showPrefDialog.value = false
         }) {
             Text(text = "Play Online")
         }

@@ -4,6 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.akheparasu.tic_tac_toe.utils.Difficulty
+import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.Player
 import java.util.Date
 
@@ -13,11 +14,9 @@ data class DataEntity(
     @ColumnInfo(name = "date") val date: Date,
     @ColumnInfo(name = "winner") val winner: Player,
     @ColumnInfo(name = "difficulty") val difficulty: Difficulty?,
-    @ColumnInfo(name = "gridSize") val gridSize: Int,
-    @ColumnInfo(name = "score") val score: Float,
+    @ColumnInfo(name = "gameMode") val gameMode: GameMode,
 ) {
     init {
-        require(gridSize > 2) { "Grid size must be greater than 2" }
-        require(score >= 0) { "Score must be greater than or equal to 0" }
+        require(id >= 0) { "Id must be greater than or equal to 0" }
     }
 }

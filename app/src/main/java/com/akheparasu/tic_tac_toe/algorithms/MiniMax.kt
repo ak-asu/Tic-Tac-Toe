@@ -2,9 +2,10 @@ package com.akheparasu.tic_tac_toe.algorithms
 
 import android.util.Log
 import com.akheparasu.tic_tac_toe.utils.Difficulty
+import com.akheparasu.tic_tac_toe.utils.GridEntry
 import kotlin.random.Random
 
-fun runAITurn(grid: Array<Array<String>>,diff: Difficulty): Array<Array<String>> {
+fun runAITurn(grid: Array<Array<GridEntry>>,diff: Difficulty): Array<Array<GridEntry>> {
     var randEasy = 0                    // var and val used
     val randMed = Random.nextBoolean()  // the 50 / 50 for easy or hard per turn
     val gridSize = grid.size
@@ -15,7 +16,7 @@ fun runAITurn(grid: Array<Array<String>>,diff: Difficulty): Array<Array<String>>
 
     for(i in 0 until gridSize){     // find spots that are filled or empty
         for(j in 0 until gridSize){
-            if(grid[i][j] == ""){
+            if(grid[i][j] == GridEntry.E){
                 gridCheckI.add(i)
                 gridCheckJ.add(j)
             }
@@ -33,7 +34,7 @@ fun runAITurn(grid: Array<Array<String>>,diff: Difficulty): Array<Array<String>>
         randEasy = Random.nextInt((gridSize*gridSize) - gridEmpty)
         val outputI = gridCheckI[randEasy]  // takes the random value and uses it -
         val outputJ = gridCheckJ[randEasy]  // to find the given I and J found above
-        grid[outputI][outputJ] = "O"        // set move and return
+        grid[outputI][outputJ] = GridEntry.O        // set move and return
         //Log.i("randEasy:", randEasy.toString())           // testing only
         return grid
     }
@@ -45,7 +46,7 @@ fun runAITurn(grid: Array<Array<String>>,diff: Difficulty): Array<Array<String>>
             randEasy = Random.nextInt((gridSize*gridSize) - gridEmpty)
             val outputI = gridCheckI[randEasy]
             val outputJ = gridCheckJ[randEasy]
-            grid[outputI][outputJ] = "O"
+            grid[outputI][outputJ] = GridEntry.O
             Log.i("medRoll", "rolled Easy mode")    // testing only
             return grid
         }
@@ -60,10 +61,10 @@ fun runAITurn(grid: Array<Array<String>>,diff: Difficulty): Array<Array<String>>
         var outputJ = 0
         for (i in 0 until gridSize) {   // loop through every move and find best outcomes
             for (j in 0 until gridSize) {
-                if (grid[i][j] == "") {
-                    grid[i][j] = "O" // make the test move
+                if (grid[i][j] == GridEntry.E) {
+                    grid[i][j] = GridEntry.O // make the test move
                     val score = miniMax(grid, 1, 0, Int.MIN_VALUE, Int.MAX_VALUE) // call miniMax for player
-                    grid[i][j] = "" // undo the test move
+                    grid[i][j] = GridEntry.E // undo the test move
 
                     if (score > bestScore) {    // find new best score and move
                         bestScore = score
@@ -74,26 +75,26 @@ fun runAITurn(grid: Array<Array<String>>,diff: Difficulty): Array<Array<String>>
             }
         }
 
-        grid[outputI][outputJ] = "O"    // set move and return
+        grid[outputI][outputJ] = GridEntry.O    // set move and return
         Log.i("hardDiff", "is Hard mode") // testing only
 
     }
     return grid
 }
 
-fun miniMax(grid: Array<Array<String>>, player: Int, depth: Int, alpha: Int, beta: Int): Int{
-    val winnerCheck = findWinnners(grid)    // winner = "X", "O", ""
+fun miniMax(grid: Array<Array<GridEntry>>, player: Int, depth: Int, alpha: Int, beta: Int): Int {
+    val winnerCheck = findWinnners(grid)    // winner = GridEntry.X, GridEntry.O, GridEntry.E
     var gridFull = 0
     var bestScore: Int
-    if(winnerCheck == "X"){     // depth is used to find earliest win
+    if(winnerCheck == GridEntry.X){     // depth is used to find earliest win
         return -10 + depth
     }
-    if(winnerCheck == "O"){
+    if(winnerCheck == GridEntry.O){
         return 10 - depth
     }
     for(i in 0 until grid.size){    // finds if grid is full and if so dont run
         for(j in 0 until grid.size){
-            if(grid[i][j] != ""){
+            if(grid[i][j] != GridEntry.E){
                 gridFull = gridFull + 1
             }
         }
@@ -107,10 +108,10 @@ fun miniMax(grid: Array<Array<String>>, player: Int, depth: Int, alpha: Int, bet
         var newAlpha = alpha
         for(i in 0 until grid.size){
             for(j in 0 until grid.size){
-                if(grid[i][j] == "") {
-                    grid[i][j] = "O"
+                if(grid[i][j] == GridEntry.E) {
+                    grid[i][j] = GridEntry.O
                     val score = miniMax(grid, 1, depth + 1, newAlpha, beta)
-                    grid[i][j] = ""
+                    grid[i][j] = GridEntry.E
                     bestScore = maxOf(score, bestScore)     // find max of old and new score
                     newAlpha = maxOf(newAlpha, bestScore)   // update alpha to trim tree
                     if (beta <= newAlpha) {
@@ -125,10 +126,10 @@ fun miniMax(grid: Array<Array<String>>, player: Int, depth: Int, alpha: Int, bet
         var newBeta = beta
         for(i in 0 until grid.size){
             for(j in 0 until grid.size){
-                if(grid[i][j] == "") {
-                    grid[i][j] = "X"
+                if(grid[i][j] == GridEntry.E) {
+                    grid[i][j] = GridEntry.X
                     val score = miniMax(grid, 0, depth + 1, alpha, newBeta)
-                    grid[i][j] = ""
+                    grid[i][j] = GridEntry.E
                     bestScore = minOf(score, bestScore)     // same as above but minimize score
                     newBeta = minOf(newBeta, bestScore)     // trim using new beta
                     if (newBeta <= alpha) {
@@ -141,34 +142,34 @@ fun miniMax(grid: Array<Array<String>>, player: Int, depth: Int, alpha: Int, bet
     return bestScore
 }
 
-fun findWinnners(grid: Array<Array<String>>): String{
+fun findWinnners(grid: Array<Array<GridEntry>>): GridEntry {
     val gridSize = grid.size
     // this works for 3x3 grid but might need to be updated, just checks all outcomes for winnin
     for(i in 0 until gridSize){
-            if(grid[i][0] == "X" && grid[i][1] == "X" && grid[i][2] == "X"){
-                return "X"
+            if(grid[i][0] == GridEntry.X && grid[i][1] == GridEntry.X && grid[i][2] == GridEntry.X){
+                return GridEntry.X
             }
-            if(grid[0][i] == "X" && grid[1][i] == "X" && grid[2][i] == "X"){
-                return "X"
+            if(grid[0][i] == GridEntry.X && grid[1][i] == GridEntry.X && grid[2][i] == GridEntry.X){
+                return GridEntry.X
             }
-            if(grid[i][0] == "O" && grid[i][1] == "O" && grid[i][2] == "O"){
-                return "O"
+            if(grid[i][0] == GridEntry.O && grid[i][1] == GridEntry.O && grid[i][2] == GridEntry.O){
+                return GridEntry.O
             }
-            if(grid[0][i] == "O" && grid[1][i] == "O" && grid[2][i] == "O") {
-                return "O"
+            if(grid[0][i] == GridEntry.O && grid[1][i] == GridEntry.O && grid[2][i] == GridEntry.O) {
+                return GridEntry.O
             }
     }
-    if(grid[0][0] == "X" && grid[1][1] == "X" && grid[2][2] == "X"){
-        return "X"
+    if(grid[0][0] == GridEntry.X && grid[1][1] == GridEntry.X && grid[2][2] == GridEntry.X){
+        return GridEntry.X
     }
-    if(grid[0][0] == "O" && grid[1][1] == "O" && grid[2][2] == "O"){
-        return "O"
+    if(grid[0][0] == GridEntry.O && grid[1][1] == GridEntry.O && grid[2][2] == GridEntry.O){
+        return GridEntry.O
     }
-    if(grid[0][2] == "X" && grid[1][1] == "X" && grid[2][0] == "X"){
-        return "X"
+    if(grid[0][2] == GridEntry.X && grid[1][1] == GridEntry.X && grid[2][0] == GridEntry.X){
+        return GridEntry.X
     }
-    if(grid[0][2] == "O" && grid[1][1] == "O" && grid[2][0] == "O"){
-        return "O"
+    if(grid[0][2] == GridEntry.O && grid[1][1] == GridEntry.O && grid[2][0] == GridEntry.O){
+        return GridEntry.O
     }
-    return ""
+    return GridEntry.E
 }
