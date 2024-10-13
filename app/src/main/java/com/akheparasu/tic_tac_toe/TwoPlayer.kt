@@ -172,16 +172,21 @@ class TwoPlayer(private val context: Context) {
     fun startBluetoothServer(onServerStarted: () -> Unit){
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                currentServerSocket = bluetoothAdapter?.listenUsingRfcommWithServiceRecord(
-                    "TicTacToeServer",
-                    MY_UUID
-                )
-                currentClientSocket = currentServerSocket?.accept()
+                currentServerSocket = bluetoothAdapter?.listenUsingRfcommWithServiceRecord("TicTacToeServer", MY_UUID)
 
-                withContext(Dispatchers.Main){
-                    Toast.makeText(context, "Server started, Ready to receive connections", Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    onServerStarted()
+                    Toast.makeText(context, "Server Started", Toast.LENGTH_SHORT).show()
                 }
 
+                while(true){
+                    val clientSocket = currentServerSocket?.accept()
+                    if(clientSocket != null){
+                        withContext(Dispatchers.Main){
+                            Toast.makeText(context, "Client Connected!", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             } catch (e: IOException) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(context, "Failed to start server: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -227,6 +232,33 @@ class TwoPlayer(private val context: Context) {
             }
         }
     }
+
+    /*fun isServerReady(device: BluetoothDevice): Boolean {
+        CoroutineScope(Dispatchers.IO).launch {
+            // Implement a method to check if Device 1 is available (could be a simple connect attempt)
+            val isServerReady = attemptToConnect(device)
+
+            if (isServerReady) {
+                // Server is ready, proceed with connection
+                connectToDevice(device, activity)
+            } else {
+                // Retry or handle failure
+            }
+        }
+    }
+
+    private suspend fun attemptToConnect(device: BluetoothDevice): Boolean {
+        return try {
+            val socket = device.createRfcommSocketToServiceRecord(MY_UUID)
+            socket.connect()  // This will throw an exception if it can't connect
+            true  // Connection successful
+        } catch (e: IOException) {
+            false  // Connection failed
+        }
+    }*/
+
+
+
 
 
 

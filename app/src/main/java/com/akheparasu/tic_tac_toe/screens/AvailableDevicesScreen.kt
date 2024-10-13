@@ -9,6 +9,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -87,23 +88,38 @@ fun AvailableDevicesScreen(twoPlayer: TwoPlayer, activity: Activity) {
             items(pairedDevices) { pairedDevice ->
                 BluetoothDeviceItem(
                     device = pairedDevice,
-                    onClick = { selectedDevice ->
+                    onClick = { selectedDevice = pairedDevice
+
                         //start server if its not running
-                        if(!isServerRunning) {
-                            Toast.makeText(context, "Trying To start a server", Toast.LENGTH_SHORT).show()
-                            twoPlayer.startBluetoothServer {
-                                isServerRunning = true
-                                Toast.makeText(context, "Server Started", Toast.LENGTH_SHORT).show()
-                            }
-                        }else{
-                            //if server is running, connect to the device
-                            Toast.makeText(context, "Trying To make a connection", Toast.LENGTH_SHORT).show()
-                            twoPlayer.connectToDevice(selectedDevice, activity)
-                            Toast.makeText(context, "Devices Connected!", Toast.LENGTH_SHORT).show()
-                        }
+                        /*if(!isServerRunning) {
+
+                        }*/
                     }
                 )
             }
+        }
+        Spacer(modifier = Modifier.weight(1f))
+
+        Button(
+            onClick = {
+                Toast.makeText(context, "Trying To start a server", Toast.LENGTH_SHORT).show()
+                twoPlayer.startBluetoothServer {
+                    isServerRunning = true
+                    Toast.makeText(context, "Server Started", Toast.LENGTH_SHORT).show()
+                }
+            },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp) // Full width with padding
+        ){
+            Text("Start Server")
+        }
+
+        Button(
+            onClick = {
+                twoPlayer.connectToDevice(selectedDevice!!, activity)
+            },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp) // Full width with padding
+        ){
+            Text("Connect To Server")
         }
     }
     if (showWhoGoesFirstDialog && selectedDevice != null){
