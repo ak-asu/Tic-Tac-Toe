@@ -22,6 +22,7 @@ navigationCompose = "2.8.1"
 datastoreCoreAndroid = "1.1.1"
 roomRuntime = "2.6.1"
 identityJvm = "202408.1"
+playServicesBasement = "18.4.0"
 
 [libraries]
 androidx-activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "activityKtx" }
@@ -54,6 +55,7 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 androidx-datastore-core-android = { group = "androidx.datastore", name = "datastore-core-android", version.ref = "datastoreCoreAndroid" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomCompiler" }
 identity-jvm = { group = "com.android.identity", name = "identity-jvm", version.ref = "identityJvm" }
+play-services-basement = { group = "com.google.android.gms", name = "play-services-basement", version.ref = "playServicesBasement" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -9,14 +9,20 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.bluetooth.BluetoothClass.Device
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothServerSocket
 import android.bluetooth.BluetoothSocket
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.browse.MediaBrowser
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -25,8 +31,16 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.UUID
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onCompletion
+
+
 
 class TwoPlayer(private val context: Context) {
     private val bluetoothManager by lazy{
@@ -40,21 +54,30 @@ class TwoPlayer(private val context: Context) {
     var deviceList = mutableStateOf<List<BluetoothDevice>>(listOf())
     var pairedDevicesList = mutableStateOf<List<BluetoothDevice>>(listOf())
 
+    private var currentServerSocket: BluetoothServerSocket? = null
+    private var currentClientSocket: BluetoothSocket? = null
+
     // BroadcastReceiver to listen for paired/unpaired devices
     private val bondStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val action = intent?.action
             if (BluetoothDevice.ACTION_BOND_STATE_CHANGED == action) {
-                updatePairedDevices()  // Refresh paired devices list
+                updatePairedDevices()  // if a device is paired/unpaired, update the list
             }
         }
     }
 
+    companion object {
+        val MY_UUID: UUID = UUID.fromString("a87a2c7c-bc26-4782-bc6a-1998fa5168d0")
+        const val REQUEST_CODE = 1001
+
+    }
+
     init {
-        // Fetch initial paired devices
+        // find initial paired devices
         updatePairedDevices()
 
-        // Register BroadcastReceiver to listen for pairing/unpairing events
+        // Register BroadcastReceiver to listen for pairing/unpairing
         val filter = IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
         context.registerReceiver(bondStateReceiver, filter)
     }
@@ -144,28 +167,71 @@ class TwoPlayer(private val context: Context) {
         }
     }
 
-    /*fun connectToDevice(device: BluetoothDevice, activity: Activity) {
-        if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(activity, arrayOf(android.Manifest.permission.BLUETOOTH_CONNECT), REQUEST_CODE)
-            return
-        }
 
+    @SuppressLint("MissingPermission")
+    fun startBluetoothServer(onServerStarted: () -> Unit){
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val socket = device.createRfcommSocketToServiceRecord(MY_UUID)
-                bluetoothAdapter?.cancelDiscovery()
-                socket.connect()
+                currentServerSocket = bluetoothAdapter?.listenUsingRfcommWithServiceRecord(
+                    "TicTacToeServer",
+                    MY_UUID
+                )
+                currentClientSocket = currentServerSocket?.accept()
 
-                manageConnection(socket)
+                withContext(Dispatchers.Main){
+                    Toast.makeText(context, "Server started, Ready to receive connections", Toast.LENGTH_SHORT).show()
+                }
+
             } catch (e: IOException) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Unable to connect to device", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Failed to start server: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+                try {
+                    currentServerSocket?.close()
+                } catch (closeException: IOException) {
+                    Log.e("Bluetooth", "Failed to close server socket: ${closeException.message}")
                 }
             }
         }
     }
 
-    suspend fun manageConnection(socket: BluetoothSocket) = withContext(Dispatchers.IO) {
+    fun connectToDevice(device: BluetoothDevice, activity: Activity) {
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                currentClientSocket = device.createRfcommSocketToServiceRecord(MY_UUID)
+                bluetoothAdapter?.cancelDiscovery()
+                currentClientSocket?.connect()
+                //manageConnection(socket)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Connected to device", Toast.LENGTH_SHORT).show()
+                }
+
+
+            } catch (e: IOException) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Unable to connect to device: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+                try {
+                    currentClientSocket?.close()
+                } catch (closeException: IOException) {
+                    Log.e("Bluetooth", "Failed to close socket: ${closeException.message}")
+                }
+            }
+        }
+    }
+
+
+
+
+    /*suspend fun manageConnection(socket: BluetoothSocket) = withContext(Dispatchers.IO) {
         try {
             socket.inputStream.use { input ->
                 val buffer = ByteArray(1024)
@@ -185,12 +251,6 @@ class TwoPlayer(private val context: Context) {
     }
 
     fun handleReceivedMessage(message: String) {
-
-    }
-
-    companion object {
-        val MY_UUID: UUID = UUID.fromString("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
-        const val REQUEST_CODE = 1001
 
     }*/
 
