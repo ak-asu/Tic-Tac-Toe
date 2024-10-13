@@ -3,9 +3,6 @@ package com.akheparasu.tic_tac_toe.utils
 import androidx.compose.ui.graphics.Color
 
 const val DEFAULT_VOLUME = 1.0f
-const val DEFAULT_GRID_SIZE = 3
-const val MIN_GRID_SIZE = 3
-const val MAX_GRID_SIZE = 9
 const val SPACER_HEIGHT = 16
 
 
@@ -48,4 +45,27 @@ enum class GameMode {
     Computer,
     Human,
     Online;
+}
+
+enum class Preference(private val id: Int) {
+    First(0),
+    Second(1),
+    NoPreference(2),
+    AskEveryTime(3);
+
+    fun getPreferenceId(): Int {
+        return id
+    }
+
+    companion object {
+        fun fromId(id: Int): Preference {
+            return when (id) {
+                0 -> First
+                1 -> Second
+                2 -> NoPreference
+                3 -> AskEveryTime
+                else -> AskEveryTime
+            }
+        }
+    }
 }

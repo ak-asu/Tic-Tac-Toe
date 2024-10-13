@@ -9,9 +9,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.akheparasu.tic_tac_toe.utils.DEFAULT_GRID_SIZE
 import com.akheparasu.tic_tac_toe.utils.DEFAULT_VOLUME
 import com.akheparasu.tic_tac_toe.utils.Difficulty
+import com.akheparasu.tic_tac_toe.utils.Preference
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -23,7 +23,8 @@ class SettingsDataStore(private val context: Context) {
         val DIFFICULTY = intPreferencesKey("difficulty")
         val DARK_THEME = booleanPreferencesKey("darkTheme")
         val VOLUME = floatPreferencesKey("volume")
-        val GRID_SIZE = intPreferencesKey("gridSize")
+        val PLAYER_PREF = intPreferencesKey("playerPref")
+        val ONLINE_PREF = intPreferencesKey("onlinePref")
     }
 
     val difficultyFlow: Flow<Difficulty> = context.dataStore.data
@@ -44,8 +45,19 @@ class SettingsDataStore(private val context: Context) {
     val volumeFlow: Flow<Float> = context.dataStore.data
         .map { preferences -> preferences[PreferencesKeys.VOLUME] ?: DEFAULT_VOLUME }
 
-    val gridSizeFlow: Flow<Int> = context.dataStore.data
-        .map { preferences -> preferences[PreferencesKeys.GRID_SIZE] ?: DEFAULT_GRID_SIZE }
+    val playerPrefFlow: Flow<Preference> = context.dataStore.data
+        .map { preferences ->
+            val id =
+                preferences[PreferencesKeys.PLAYER_PREF] ?: Preference.AskEveryTime.getPreferenceId()
+            Preference.fromId(id)
+        }
+
+    val onlinePrefFlow: Flow<Preference> = context.dataStore.data
+        .map { preferences ->
+            val id =
+                preferences[PreferencesKeys.ONLINE_PREF] ?: Preference.AskEveryTime.getPreferenceId()
+            Preference.fromId(id)
+        }
 
     suspend fun saveDifficulty(difficulty: Difficulty) {
         context.dataStore.edit { preferences ->
@@ -65,9 +77,15 @@ class SettingsDataStore(private val context: Context) {
         }
     }
 
-    suspend fun saveGridSize(gridSize: Int) {
+    suspend fun savePlayerPref(playerPref: Preference) {
         context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.GRID_SIZE] = gridSize
+            preferences[PreferencesKeys.PLAYER_PREF] = playerPref.getPreferenceId()
+        }
+    }
+
+    suspend fun saveOnlinePref(onlinePref: Preference) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.ONLINE_PREF] = onlinePref.getPreferenceId()
         }
     }
 }
