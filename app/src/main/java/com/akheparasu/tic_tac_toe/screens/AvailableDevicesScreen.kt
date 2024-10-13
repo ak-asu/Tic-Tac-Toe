@@ -115,7 +115,12 @@ fun AvailableDevicesScreen(twoPlayer: TwoPlayer, activity: Activity) {
 
         Button(
             onClick = {
-                twoPlayer.connectToDevice(selectedDevice!!, activity)
+                if(selectedDevice != null){
+                    twoPlayer.connectToDevice(selectedDevice!!, activity)
+                }else{
+                    Toast.makeText(context, "No device selected", Toast.LENGTH_SHORT).show()
+                }
+
             },
             modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp) // Full width with padding
         ){
