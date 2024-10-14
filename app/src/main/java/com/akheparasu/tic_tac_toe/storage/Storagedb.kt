@@ -11,6 +11,7 @@ import androidx.room.TypeConverters
     DateConverters::class,
     DifficultyConverters::class,
     PlayerConverters::class,
+    GameModeConverters::class,
 )
 abstract class StorageDB : RoomDatabase() {
 

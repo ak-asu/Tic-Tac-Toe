@@ -1,25 +1,17 @@
 package com.akheparasu.tic_tac_toe
 
-import android.Manifest
-import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -40,11 +32,14 @@ import com.akheparasu.tic_tac_toe.screens.ScoreScreen
 import com.akheparasu.tic_tac_toe.settings.SettingsDataStore
 import com.akheparasu.tic_tac_toe.ui.AppBar
 import com.akheparasu.tic_tac_toe.ui.theme.TicTacToeTheme
+import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.LocalAudioPlayer
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
+import com.akheparasu.tic_tac_toe.utils.Preference
+import com.akheparasu.tic_tac_toe.utils.GameResult
 
 
 class MainActivity : ComponentActivity() {
@@ -81,9 +76,13 @@ class MainActivity : ComponentActivity() {
                             composable("home") {
                                 HomeScreen()
                             }
-                            composable("game/{gameModeName}") { backStackEntry ->
+                            composable("game/{gameModeName}/{preference}") { backStackEntry ->
                                 val gameModeName =
                                     backStackEntry.arguments?.getString("gameModeName")
+                                val preference = Preference.valueOf(
+                                    backStackEntry.arguments?.getString("preference")
+                                        ?: Preference.First.name
+                                )
                                 if (GameMode.entries.map { mode -> mode.name }
                                         .contains(gameModeName)) {
                                     val gameMode = GameMode.valueOf(gameModeName!!)
@@ -112,21 +111,41 @@ class MainActivity : ComponentActivity() {
                                                 permissionLauncher.launch(allPermissions)
                                             }
                                         } else {
-                                            if (originalConnectedDevice == null) {
-                                                Snackbar { Text("No device connected") }
-                                            } else {
+                                            if (originalConnectedDevice != null) {
+                                                audioPlayerContext.onGameStart()
                                                 GameScreen(
                                                     gameMode,
+                                                    preference,
                                                     originalConnectedDevice
                                                 )
                                             }
                                         }
                                     } else {
-                                        GameScreen(gameMode, originalConnectedDevice)
+                                        audioPlayerContext.onGameStart()
+                                        GameScreen(gameMode, preference, originalConnectedDevice)
                                     }
                                 }
                             }
-                            composable("score") { ScoreScreen() }
+                            composable("score/{gameModeName}/{difficulty}/{gameResult}") { backStackEntry ->
+                                val gameModeName =
+                                    backStackEntry.arguments?.getString("gameModeName")
+                                val difficulty = backStackEntry.arguments?.getString("difficulty")
+                                    ?.let { runCatching { Difficulty.valueOf(it) }.getOrNull() }
+                                val gameResult = GameResult.valueOf(
+                                    backStackEntry.arguments?.getString("gameResult")
+                                        ?: GameResult.Draw.name
+                                )
+                                if (GameMode.entries.map { mode -> mode.name }
+                                        .contains(gameModeName)) {
+                                    val gameMode = GameMode.valueOf(gameModeName!!)
+                                    when (gameResult) {
+                                        GameResult.Win -> audioPlayerContext.onWin()
+                                        GameResult.Fail -> audioPlayerContext.onFail()
+                                        GameResult.Draw -> audioPlayerContext.onDraw()
+                                    }
+                                    ScoreScreen(gameMode, difficulty, gameResult)
+                                }
+                            }
                             composable("career") { CareerScreen(careerViewModel) }
                         }
                     }
@@ -135,24 +154,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-//    @SuppressLint("MissingPermission")
-//    private fun enableBluetooth() {
-//        val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-//        startActivity(enableBtIntent)
-//    }
-
     override fun onStop() {
         super.onStop()
-        connectionService.unregisterReceiver()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        connectionService.registerReceiver()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        connectionService.unregisterReceiver()
+        connectionService.dispose()
     }
 }

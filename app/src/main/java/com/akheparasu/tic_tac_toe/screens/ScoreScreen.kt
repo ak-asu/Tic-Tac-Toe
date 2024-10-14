@@ -12,10 +12,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.akheparasu.tic_tac_toe.utils.Difficulty
+import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
+import com.akheparasu.tic_tac_toe.utils.GameResult
 
 @Composable
-fun ScoreScreen() {
+fun ScoreScreen(
+    gameMode: GameMode,
+    difficulty: Difficulty?,
+    gameResult: GameResult,
+) {
     val navController = LocalNavController.current
 
     Column(
@@ -26,9 +33,15 @@ fun ScoreScreen() {
         verticalArrangement = Arrangement.Center
     ) {
         Text(text = "Score Screen")
-
         Spacer(modifier = Modifier.height(16.dp))
-
+        Text(text = "Mode: ${gameMode.name}")
+        Spacer(modifier = Modifier.height(16.dp))
+        if (difficulty!=null) {
+            Text(text = "Difficulty: ${difficulty.name}")
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        Text(text = gameResult.getDisplayText())
+        Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { navController?.popBackStack() }) {
             Text(text = "Replay")
         }

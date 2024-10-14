@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -27,6 +28,7 @@ import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
 import com.akheparasu.tic_tac_toe.utils.Preference
 
+@SuppressLint("MissingPermission")
 @Composable
 fun DevicesDialog(
     onDeviceSelected: (BluetoothDevice, Preference) -> Unit,
@@ -35,8 +37,7 @@ fun DevicesDialog(
     val context = LocalContext.current
     val settings = LocalSettings.current
     val connectionService = LocalConnectionService.current
-    val pairedDevices = connectionService.pairedDevices.collectAsState()
-    val discoveredDevices = connectionService.discoveredDevices.collectAsState()
+    val devices = connectionService.devices.collectAsState()
     val selectedDevice = connectionService.connectedDevice.collectAsState()
     var isFirstView by remember { mutableStateOf(true) }
     val onlinePrefFlow = settings.onlinePrefFlow.collectAsState(initial = Preference.AskEveryTime)
@@ -50,6 +51,7 @@ fun DevicesDialog(
     }
 
     LaunchedEffect(Unit) {
+        connectionService.registerReceiver()
         connectionService.startDiscovery()
     }
     // Update devices when new ones are discovered
@@ -61,18 +63,37 @@ fun DevicesDialog(
 
     if (isFirstView || selectedDevice.value == null) {
         AlertDialog(
-            onDismissRequest = onDismiss,
+            onDismissRequest = {
+                connectionService.unregisterReceiver()
+                onDismiss()
+            },
             title = { Text("Select Device") },
             text = {
                 Column {
+                    val discoveredDevices =
+                        devices.value.filter { it.bondState != BluetoothDevice.BOND_BONDED }
+                    val pairedDevices =
+                        devices.value.filter { it.bondState == BluetoothDevice.BOND_BONDED }
                     Text("Available New Devices:")
-                    discoveredDevices.value.forEach { device ->
-                        DeviceItem(device, onDeviceSelected = {  })
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) {
+                        items(discoveredDevices.size) { index ->
+                            DeviceItem(discoveredDevices[index])
+                        }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Paired Devices:")
-                    pairedDevices.value.forEach { device ->
-                        DeviceItem(device, onDeviceSelected = {  })
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) {
+                        items(pairedDevices.size) { index ->
+                            DeviceItem(pairedDevices[index])
+                        }
                     }
 
                 }
@@ -93,7 +114,10 @@ fun DevicesDialog(
                 ) { Text("Next") }
             },
             dismissButton = {
-                Button(onClick = onDismiss) { Text("Cancel") }
+                Button(onClick = {
+                    connectionService.unregisterReceiver()
+                    onDismiss()
+                }) { Text("Cancel") }
             }
         )
     } else {
@@ -119,17 +143,19 @@ fun DevicesDialog(
 
 @SuppressLint("MissingPermission")
 @Composable
-fun DeviceItem(device: BluetoothDevice, onDeviceSelected: () -> Unit) {
+fun DeviceItem(device: BluetoothDevice) {
+    val connectionService = LocalConnectionService.current
+    val context = LocalContext.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clickable {
-                onDeviceSelected()
+                connectionService.connectDevice(device)
             }
     ) {
         Text(
-            text = "${device.name} - ${device.address}",
+            text = device.name,
             modifier = Modifier.padding(16.dp)
         )
     }

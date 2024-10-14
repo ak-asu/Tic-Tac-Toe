@@ -83,3 +83,17 @@ enum class GridEntry {
         }
     }
 }
+
+enum class GameResult {
+    Win,
+    Fail,
+    Draw;
+
+    fun getDisplayText(): String {
+        return when (this) {
+            Win -> "You Won"
+            Fail -> "You Lost"
+            Draw -> "Game Draw"
+        }
+    }
+}

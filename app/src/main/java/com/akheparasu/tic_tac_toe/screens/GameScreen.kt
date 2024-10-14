@@ -2,7 +2,6 @@ package com.akheparasu.tic_tac_toe.screens
 
 import android.bluetooth.BluetoothDevice
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -29,17 +29,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.akheparasu.tic_tac_toe.algorithms.runAITurn
 import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.GameMode
+import com.akheparasu.tic_tac_toe.utils.GameResult
 import com.akheparasu.tic_tac_toe.utils.GridEntry
+import com.akheparasu.tic_tac_toe.utils.LocalAudioPlayer
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
+import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
 import com.akheparasu.tic_tac_toe.utils.Preference
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlin.reflect.KProperty
 
 @Composable
 fun GameScreen(
@@ -49,17 +54,20 @@ fun GameScreen(
 ) {
     val context = LocalContext.current
     val settings = LocalSettings.current
+    val navController = LocalNavController.current
+    val audioController = LocalAudioPlayer.current
     val difficultyFlow = settings.difficultyFlow.collectAsState(initial = Difficulty.Easy)
     val gridSaver = Saver(
         save = { grid: MutableState<Array<Array<GridEntry>>> ->
             grid.value.map { r -> r.map { it.name }.toTypedArray() }.toTypedArray()
         },
         restore = { saved: Array<Array<String>> ->
-            mutableStateOf(saved.map { r -> r.map { GridEntry.valueOf(it) }.toTypedArray() }.toTypedArray())
+            mutableStateOf(saved.map { r -> r.map { GridEntry.valueOf(it) }.toTypedArray() }
+                .toTypedArray())
         }
     )
-    var grid by rememberSaveable (saver = gridSaver) { mutableStateOf(Array(3) { Array(3) { GridEntry.E } }) }
-    var playerTurn by rememberSaveable { mutableStateOf(preference==Preference.First) }
+    var grid by rememberSaveable(saver = gridSaver) { mutableStateOf(Array(3) { Array(3) { GridEntry.E } }) }
+    var playerTurn by rememberSaveable { mutableStateOf(preference == Preference.First) }
     val isGameComplete: (Array<Array<GridEntry>>) -> Boolean =
         { !it.any { c -> c.any { v -> v == GridEntry.E } } }
     val connectionService = LocalConnectionService.current
@@ -85,6 +93,12 @@ fun GameScreen(
             }
         }
     }
+    DisposableEffect(context) {
+        onDispose {
+            connectionService.stopDiscovery()
+            connectionService.unregisterReceiver()
+        }
+    }
 
     if (gamePaused) {
         Text("Game paused")
@@ -104,23 +118,15 @@ fun GameScreen(
                 Row {
                     for (j in 0 until 3) {
                         GridCell(value = grid[i][j].getDisplayText(), onTap = {
-                            if (grid[i][j]!=GridEntry.E) {
-                                Toast.makeText(
-                                    context,
-                                    "That spot has already been selected!",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            } else {
+                            if (grid[i][j] == GridEntry.E) {
                                 if (playerTurn) {
                                     grid[i][j] = GridEntry.X
                                     playerTurn = false
                                     //Check for the win condition
                                     if (checkWinner(grid)?.equals(GridEntry.X) == true) {
-                                        Toast.makeText(
-                                            context,
-                                            "PLAYER X WINS!!!",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
+                                        navController?.navigate("score/${gameMode.name}/${difficultyFlow.value}/${GameResult.Win}")
+                                    } else {
+                                        audioController.onPlayerTap()
                                     }
                                 } else {
                                     //Player 2 Game Mode
@@ -129,11 +135,9 @@ fun GameScreen(
                                         playerTurn = true
                                         //Check for the win condition
                                         if (checkWinner(grid)?.equals(GridEntry.O) == true) {
-                                            Toast.makeText(
-                                                context,
-                                                "PLAYER O WINS!!!",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
+                                            navController?.navigate("score/${gameMode.name}/${null}/${GameResult.Fail}")
+                                        } else {
+                                            audioController.onOpponentTap()
                                         }
                                     }
                                     //Computer Game Mode
@@ -142,17 +146,9 @@ fun GameScreen(
                                         //Check for the win condition
 
                                         if (checkWinner(grid)?.equals(GridEntry.O) == true) {
-                                            Toast.makeText(
-                                                context,
-                                                "PLAYER O WINS!!!",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
+
                                         } else if (checkWinner(grid)?.equals(GridEntry.X) == true) {
-                                            Toast.makeText(
-                                                context,
-                                                "PLAYER X WINS!!!",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
+
                                         }
                                     }
                                 }
@@ -165,11 +161,7 @@ fun GameScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(onClick = {
-                for (i in 0 until 3) {
-                    for (j in 0 until 3) {
-                        grid[i][j] = GridEntry.E
-                    }
-                }
+                grid = Array(3) { Array(3) { GridEntry.E } }
                 playerTurn = true
             }) {
                 Text(text = "Reset Game")
@@ -188,10 +180,16 @@ fun GridCell(value: String, onTap: () -> Unit) {
             .clickable { onTap() },
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            drawRect(color = Color.LightGray)
+        Canvas(modifier = Modifier
+            .fillMaxSize()
+            .zIndex(-1f)) {
+            drawRect(color = Color.Gray)
         }
-        Text(text = value.toString())
+        Text(
+            text = value,
+            fontWeight = FontWeight.Bold,
+            fontSize = 75.sp
+        )
     }
 }
 
@@ -222,7 +220,7 @@ fun checkWinner(grid: Array<Array<GridEntry>>): GridEntry? {
         val (i3, j3) = third
 
         // Return X or O
-        if (grid[i1][j1] == grid[i2][j2] && grid[i2][j2] == grid[i3][j3] && grid[i1][j1]!=GridEntry.E) {
+        if (grid[i1][j1] == grid[i2][j2] && grid[i2][j2] == grid[i3][j3] && grid[i1][j1] != GridEntry.E) {
             return grid[i1][j1]
         }
     }
