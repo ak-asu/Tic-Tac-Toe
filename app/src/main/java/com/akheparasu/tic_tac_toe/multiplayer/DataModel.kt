@@ -2,7 +2,7 @@ package com.akheparasu.tic_tac_toe.multiplayer
 
 data class DataModel(
     val gameState: GameState,
-    val metadata: Metadata
+    val metaData: MetaData
 )
 
 data class GameState(
@@ -14,7 +14,7 @@ data class GameState(
     val reset: Boolean
 )
 
-data class Metadata(
+data class MetaData(
     val choices: List<PlayerChoice>,
     val miniGame: MiniGame
 )

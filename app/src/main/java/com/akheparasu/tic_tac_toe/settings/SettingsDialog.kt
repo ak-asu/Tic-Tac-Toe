@@ -8,11 +8,13 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -45,6 +47,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.akheparasu.tic_tac_toe.utils.DEFAULT_VOLUME
 import com.akheparasu.tic_tac_toe.utils.Difficulty
+import com.akheparasu.tic_tac_toe.utils.LocalAudioPlayer
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
 import com.akheparasu.tic_tac_toe.utils.Preference
 import kotlinx.coroutines.launch
@@ -91,7 +94,7 @@ fun DifficultySelector() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         Difficulty.entries.forEach { difficulty ->
@@ -105,7 +108,9 @@ fun DifficultySelector() {
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (selectedDifficulty == difficulty) selectedDifficulty.getColor() else Color.Gray,
                 ),
-                modifier = Modifier.weight(1f)
+                contentPadding = PaddingValues(2.dp),
+                modifier = Modifier.weight(1f).padding(4.dp),
+                shape = RoundedCornerShape(4.dp)
             ) {
                 Text(text = difficulty.name)
             }
@@ -116,6 +121,7 @@ fun DifficultySelector() {
 @Composable
 fun VolumeSlider() {
     val settingsDataStore = LocalSettings.current
+    val audioController = LocalAudioPlayer.current
     val coroutineScope = rememberCoroutineScope()
 
     var currentVolume by remember { mutableFloatStateOf(DEFAULT_VOLUME) }
@@ -133,6 +139,7 @@ fun VolumeSlider() {
             coroutineScope.launch {
                 settingsDataStore.saveVolume(volume)
             }
+            audioController.setVolume(volume)
         },
         valueRange = 0f..DEFAULT_VOLUME,
         steps = 10,
@@ -221,7 +228,7 @@ fun PlayerPrefMenu() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Grid dimension ", modifier = Modifier.padding(8.dp))
+                Text(text = "Player Preference", modifier = Modifier.padding(8.dp))
                 Text(text = selectedOption.name, modifier = Modifier.padding(8.dp))
             }
         }
@@ -294,7 +301,7 @@ fun OnlinePrefMenu() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Grid dimension ", modifier = Modifier.padding(8.dp))
+                Text(text = "Online Preference", modifier = Modifier.padding(8.dp))
                 Text(text = selectedOption.name, modifier = Modifier.padding(8.dp))
             }
         }

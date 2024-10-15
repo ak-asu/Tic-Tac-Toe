@@ -48,6 +48,7 @@ fun CareerScreen(careerViewModel: CareerViewModel) {
                 DisplayText("Date: ", records[record].date.toString())
                 DisplayText("Winner: ", records[record].winner.toString())
                 DisplayText("Difficulty: ", records[record].difficulty?.name ?: "-")
+                DisplayText("GameMode: ", records[record].gameMode.name)
             }
         }
     }

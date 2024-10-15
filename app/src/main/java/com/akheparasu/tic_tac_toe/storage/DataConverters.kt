@@ -2,6 +2,7 @@ package com.akheparasu.tic_tac_toe.storage
 
 import androidx.room.TypeConverter
 import com.akheparasu.tic_tac_toe.utils.Difficulty
+import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.Player
 import java.util.Date
 
@@ -40,5 +41,18 @@ class PlayerConverters {
     @TypeConverter
     fun toPlayer(player: String): Player {
         return Player.valueOf(player)
+    }
+}
+
+class GameModeConverters {
+
+    @TypeConverter
+    fun fromGameMode(gameMode: GameMode?): String? {
+        return gameMode?.name
+    }
+
+    @TypeConverter
+    fun toGameMode(gameMode: String?): GameMode? {
+        return gameMode?.let { runCatching { GameMode.valueOf(it) }.getOrNull() }
     }
 }
