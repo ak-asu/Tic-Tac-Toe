@@ -1,22 +1,16 @@
 package com.akheparasu.tic_tac_toe
 
-import android.bluetooth.BluetoothDevice
-import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -34,12 +28,12 @@ import com.akheparasu.tic_tac_toe.ui.AppBar
 import com.akheparasu.tic_tac_toe.ui.theme.TicTacToeTheme
 import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.GameMode
+import com.akheparasu.tic_tac_toe.utils.GameResult
 import com.akheparasu.tic_tac_toe.utils.LocalAudioPlayer
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
 import com.akheparasu.tic_tac_toe.utils.Preference
-import com.akheparasu.tic_tac_toe.utils.GameResult
 
 
 class MainActivity : ComponentActivity() {
@@ -56,7 +50,6 @@ class MainActivity : ComponentActivity() {
         connectionService = Connections(this)
         setContent {
             val navController: NavHostController = rememberNavController()
-
             CompositionLocalProvider(
                 LocalNavController provides navController,
                 LocalSettings provides settingsDataStore,
@@ -76,53 +69,35 @@ class MainActivity : ComponentActivity() {
                             composable("home") {
                                 HomeScreen()
                             }
-                            composable("game/{gameModeName}/{preference}") { backStackEntry ->
+                            composable("game/{gameModeName}/{preference}/{deviceAddress}") { backStackEntry ->
                                 val gameModeName =
                                     backStackEntry.arguments?.getString("gameModeName")
                                 val preference = Preference.valueOf(
                                     backStackEntry.arguments?.getString("preference")
                                         ?: Preference.First.name
                                 )
+                                val originalConnectedDeviceAddress =
+                                    backStackEntry.arguments?.getString("deviceAddress")
+                                Log.e("yoyo", originalConnectedDeviceAddress?:"")
                                 if (GameMode.entries.map { mode -> mode.name }
                                         .contains(gameModeName)) {
                                     val gameMode = GameMode.valueOf(gameModeName!!)
-                                    var originalConnectedDevice: BluetoothDevice? = null
-                                    val context = LocalContext.current
-                                    val allPermissions = connectionService.getMissingPermissions()
-                                    val permissionLauncher = rememberLauncherForActivityResult(
-                                        ActivityResultContracts.RequestMultiplePermissions()
-                                    ) { permissions ->
-                                        originalConnectedDevice =
-                                            if (permissions.values.all { it }) {
-                                                connectionService.connectedDevice.value
-                                            } else {
-                                                null
-                                            }
-                                    }
                                     if (gameMode == GameMode.Online) {
-                                        val permissionsCheck = allPermissions.all {
-                                            ContextCompat.checkSelfPermission(
-                                                context,
-                                                it
-                                            ) == PackageManager.PERMISSION_GRANTED
-                                        }
-                                        if (!permissionsCheck) {
-                                            LaunchedEffect(Unit) {
-                                                permissionLauncher.launch(allPermissions)
-                                            }
-                                        } else {
-                                            if (originalConnectedDevice != null) {
-                                                audioPlayerContext.onGameStart()
-                                                GameScreen(
-                                                    gameMode,
-                                                    preference,
-                                                    originalConnectedDevice
-                                                )
-                                            }
+                                        if (originalConnectedDeviceAddress != null) {
+                                            audioPlayerContext.onGameStart()
+                                            GameScreen(
+                                                gameMode,
+                                                preference,
+                                                originalConnectedDeviceAddress
+                                            )
                                         }
                                     } else {
                                         audioPlayerContext.onGameStart()
-                                        GameScreen(gameMode, preference, originalConnectedDevice)
+                                        GameScreen(
+                                            gameMode,
+                                            preference,
+                                            originalConnectedDeviceAddress
+                                        )
                                     }
                                 }
                             }

@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.GameMode
-import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.GameResult
+import com.akheparasu.tic_tac_toe.utils.LocalNavController
 
 @Composable
 fun ScoreScreen(
@@ -36,7 +36,7 @@ fun ScoreScreen(
         Spacer(modifier = Modifier.height(16.dp))
         Text(text = "Mode: ${gameMode.name}")
         Spacer(modifier = Modifier.height(16.dp))
-        if (difficulty!=null) {
+        if (difficulty != null) {
             Text(text = "Difficulty: ${difficulty.name}")
             Spacer(modifier = Modifier.height(16.dp))
         }

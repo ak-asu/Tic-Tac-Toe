@@ -12,8 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.requiredSizeIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -28,12 +27,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import com.akheparasu.tic_tac_toe.algorithms.runAITurn
+import com.akheparasu.tic_tac_toe.algorithms.AlgoController
+import com.akheparasu.tic_tac_toe.multiplayer.DataModel
+import com.akheparasu.tic_tac_toe.multiplayer.GameState
+import com.akheparasu.tic_tac_toe.multiplayer.MetaData
+import com.akheparasu.tic_tac_toe.multiplayer.MiniGame
+import com.akheparasu.tic_tac_toe.ui.RoundedRectButton
 import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.GameResult
@@ -44,14 +50,14 @@ import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
 import com.akheparasu.tic_tac_toe.utils.Preference
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
 
 @Composable
 fun GameScreen(
     gameMode: GameMode,
     preference: Preference,
-    originalConnectedDevice: BluetoothDevice?
+    originalConnectedDeviceAddress: String?
 ) {
+    val algoController = AlgoController(gameMode)
     val context = LocalContext.current
     val settings = LocalSettings.current
     val navController = LocalNavController.current
@@ -76,29 +82,62 @@ fun GameScreen(
     } else {
         null
     }
+    connectionService.onDataReceived = { dataModel ->
+        grid = dataModel.gameState.board.map { r -> r.map { GridEntry.valueOf(it) }.toTypedArray() }
+            .toTypedArray()
+        playerTurn = dataModel.gameState.turn == "true"
+    }
     var gamePaused by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(playerTurn) {
-        if (!playerTurn) {
-            grid = async { runOpponentTurn(grid) }.await()
-            runAITurn(grid, difficultyFlow.value)
+        if (!playerTurn && gameMode != GameMode.Human) {
+            val sendData = {
+                if (gameMode == GameMode.Online) {
+                    connectionService.sendData(
+                        DataModel(
+                            GameState(
+                                board = grid.map { it.map { e -> e.name } },
+                                turn = "true",
+                                winner = null,
+                                draw = false,
+                                connectionEstablished = true,
+                                reset = false,
+                            ),
+                            MetaData(emptyList(), MiniGame("X", "O"))
+                        )
+                    )
+                }
+            }
+            grid = async {
+                algoController.runOpponentTurn(
+                    grid,
+                    difficultyFlow.value,
+                    sendData
+                )
+            }.await()
             isGameComplete(grid)
             playerTurn = true
         }
     }
     if (gameMode == GameMode.Online) {
         LaunchedEffect(connectedDevice) {
-            if (connectedDevice?.value != originalConnectedDevice) {
+            if (connectedDevice?.value?.address != originalConnectedDeviceAddress) {
                 gamePaused = true
             }
         }
     }
     DisposableEffect(context) {
         onDispose {
+            connectionService.onDataReceived = null
             connectionService.stopDiscovery()
             connectionService.unregisterReceiver()
         }
     }
+
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
+    val screenHeight = configuration.screenHeightDp.dp
+    val maxCellSize = 0.9f * minOf(screenWidth.value, screenHeight.value) / 3
 
     if (gamePaused) {
         Text("Game paused")
@@ -110,79 +149,109 @@ fun GameScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(text = "Player: X | Opponent: O")
+            Row {
+                Text(
+                    text = "Player: X", fontWeight = if (playerTurn) {
+                        FontWeight.Bold
+                    } else {
+                        FontWeight.Thin
+                    }
+                )
+                Text(text = " | ")
+                Text(
+                    text = "Opponent: O", fontWeight = if (playerTurn) {
+                        FontWeight.Thin
+                    } else {
+                        FontWeight.Bold
+                    }
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             for (i in 0 until 3) {
-                Row {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     for (j in 0 until 3) {
-                        GridCell(value = grid[i][j].getDisplayText(), onTap = {
-                            if (grid[i][j] == GridEntry.E) {
-                                if (playerTurn) {
-                                    grid[i][j] = GridEntry.X
-                                    playerTurn = false
-                                    //Check for the win condition
-                                    if (checkWinner(grid)?.equals(GridEntry.X) == true) {
-                                        navController?.navigate("score/${gameMode.name}/${difficultyFlow.value}/${GameResult.Win}")
-                                    } else {
-                                        audioController.onPlayerTap()
-                                    }
-                                } else {
-                                    //Player 2 Game Mode
-                                    if (gameMode == GameMode.Human) {
-                                        grid[i][j] = GridEntry.O
-                                        playerTurn = true
+                        GridCell(
+                            value = grid[i][j].getDisplayText(),
+                            maxCellSize = maxCellSize,
+                            onTap = {
+                                if (grid[i][j] == GridEntry.E) {
+                                    if (playerTurn) {
+                                        grid[i][j] = GridEntry.X
+                                        playerTurn = false
                                         //Check for the win condition
-                                        if (checkWinner(grid)?.equals(GridEntry.O) == true) {
-                                            navController?.navigate("score/${gameMode.name}/${null}/${GameResult.Fail}")
+                                        if (checkWinner(grid)?.equals(GridEntry.X) == true) {
+                                            navController?.navigate("score/${gameMode.name}/${difficultyFlow.value}/${GameResult.Win}")
                                         } else {
-                                            audioController.onOpponentTap()
+                                            audioController.onPlayerTap()
                                         }
-                                    }
-                                    //Computer Game Mode
-                                    else {
-                                        Log.i("someTag", "We will have computer take their turn")
-                                        //Check for the win condition
+                                    } else {
+                                        //Player 2 Game Mode
+                                        if (gameMode == GameMode.Human) {
+                                            grid[i][j] = GridEntry.O
+                                            playerTurn = true
+                                            //Check for the win condition
+                                            if (checkWinner(grid)?.equals(GridEntry.O) == true) {
+                                                navController?.navigate("score/${gameMode.name}/${null}/${GameResult.Fail}")
+                                            } else {
+                                                audioController.onOpponentTap()
+                                            }
+                                        }
+                                        //Computer Game Mode
+                                        else {
+                                            Log.i(
+                                                "someTag",
+                                                "We will have computer take their turn"
+                                            )
+                                            //Check for the win condition
 
-                                        if (checkWinner(grid)?.equals(GridEntry.O) == true) {
+                                            if (checkWinner(grid)?.equals(GridEntry.O) == true) {
 
-                                        } else if (checkWinner(grid)?.equals(GridEntry.X) == true) {
+                                            } else if (checkWinner(grid)?.equals(GridEntry.X) == true) {
 
+                                            }
                                         }
                                     }
                                 }
-                            }
-                        })
+                            })
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Button(onClick = {
+            RoundedRectButton(onClick = {
                 grid = Array(3) { Array(3) { GridEntry.E } }
                 playerTurn = true
-            }) {
-                Text(text = "Reset Game")
-            }
+            }, text = "Reset Game")
         }
     }
 }
 
 @Composable
-fun GridCell(value: String, onTap: () -> Unit) {
+fun GridCell(value: String, maxCellSize: Float, onTap: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(100.dp)
+            .requiredSizeIn(
+                minWidth = 50.dp,
+                minHeight = 50.dp,
+                maxWidth = min(100.dp, maxCellSize.dp),
+                maxHeight = min(100.dp, maxCellSize.dp)
+            )
             .padding(8.dp)
             //.indication(interactionSource, LocalIndication.current),
             .clickable { onTap() },
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier
-            .fillMaxSize()
-            .zIndex(-1f)) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(-1f)
+        ) {
             drawRect(color = Color.Gray)
         }
         Text(
@@ -191,11 +260,6 @@ fun GridCell(value: String, onTap: () -> Unit) {
             fontSize = 75.sp
         )
     }
-}
-
-suspend fun runOpponentTurn(grid: Array<Array<GridEntry>>): Array<Array<GridEntry>> {
-    delay(1000)
-    return grid
 }
 
 // This function checks all of the possibilities of a win and returns "X" or "O" depending on who won

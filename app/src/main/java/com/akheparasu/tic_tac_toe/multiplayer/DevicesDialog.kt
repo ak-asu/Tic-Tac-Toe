@@ -3,8 +3,11 @@ package com.akheparasu.tic_tac_toe.multiplayer
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.akheparasu.tic_tac_toe.ui.RoundedRectButton
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
 import com.akheparasu.tic_tac_toe.utils.Preference
@@ -63,6 +67,7 @@ fun DevicesDialog(
 
     if (isFirstView || selectedDevice.value == null) {
         AlertDialog(
+            modifier = Modifier.fillMaxHeight(0.75f),
             onDismissRequest = {
                 connectionService.unregisterReceiver()
                 onDismiss()
@@ -122,17 +127,21 @@ fun DevicesDialog(
         )
     } else {
         AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text("Select Device") },
+            modifier = Modifier.fillMaxHeight(0.75f),
+            onDismissRequest = {
+                connectionService.unregisterReceiver()
+                onDismiss()
+            },
+            title = { Text("Select Preference") },
             text = {
-                Column {
-                    Button(onClick = { prefClickAction(Preference.First) }) { Text("First") }
+                Column (verticalArrangement = Arrangement.Center) {
+                    RoundedRectButton(onClick = { prefClickAction(Preference.First) }, text="First")
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { prefClickAction(Preference.Second) }) { Text("Second") }
+                    RoundedRectButton(onClick = { prefClickAction(Preference.Second) }, text ="Second")
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { prefClickAction(Preference.NoPreference) }) { Text("No Preference") }
+                    RoundedRectButton(onClick = { prefClickAction(Preference.NoPreference) }, text ="No Preference")
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { isFirstView = true }) { Text("Back") }
+                    RoundedRectButton(onClick = { isFirstView = true }, text = "Back")
                 }
             },
             confirmButton = { },
@@ -145,7 +154,6 @@ fun DevicesDialog(
 @Composable
 fun DeviceItem(device: BluetoothDevice) {
     val connectionService = LocalConnectionService.current
-    val context = LocalContext.current
     Card(
         modifier = Modifier
             .fillMaxWidth()

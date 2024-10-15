@@ -48,14 +48,16 @@ class SettingsDataStore(private val context: Context) {
     val playerPrefFlow: Flow<Preference> = context.dataStore.data
         .map { preferences ->
             val id =
-                preferences[PreferencesKeys.PLAYER_PREF] ?: Preference.AskEveryTime.getPreferenceId()
+                preferences[PreferencesKeys.PLAYER_PREF]
+                    ?: Preference.AskEveryTime.getPreferenceId()
             Preference.fromId(id)
         }
 
     val onlinePrefFlow: Flow<Preference> = context.dataStore.data
         .map { preferences ->
             val id =
-                preferences[PreferencesKeys.ONLINE_PREF] ?: Preference.AskEveryTime.getPreferenceId()
+                preferences[PreferencesKeys.ONLINE_PREF]
+                    ?: Preference.AskEveryTime.getPreferenceId()
             Preference.fromId(id)
         }
 
