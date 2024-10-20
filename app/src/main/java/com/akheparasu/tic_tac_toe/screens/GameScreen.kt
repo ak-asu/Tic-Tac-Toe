@@ -1,6 +1,5 @@
 package com.akheparasu.tic_tac_toe.screens
 
-import android.bluetooth.BluetoothDevice
 import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -35,10 +34,7 @@ import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.akheparasu.tic_tac_toe.algorithms.AlgoController
-import com.akheparasu.tic_tac_toe.multiplayer.DataModel
 import com.akheparasu.tic_tac_toe.multiplayer.GameState
-import com.akheparasu.tic_tac_toe.multiplayer.MetaData
-import com.akheparasu.tic_tac_toe.multiplayer.MiniGame
 import com.akheparasu.tic_tac_toe.ui.RoundedRectButton
 import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.GameMode
@@ -58,7 +54,6 @@ fun GameScreen(
     originalConnectedDeviceAddress: String?
 ) {
     val algoController = AlgoController(gameMode)
-    val context = LocalContext.current
     val settings = LocalSettings.current
     val navController = LocalNavController.current
     val audioController = LocalAudioPlayer.current
@@ -85,7 +80,11 @@ fun GameScreen(
     connectionService.setOnDataReceived { dataModel ->
         grid = dataModel.gameState.board.map { r -> r.map { GridEntry.valueOf(it) }.toTypedArray() }
             .toTypedArray()
-        playerTurn = dataModel.gameState.turn == "0"
+        playerTurn = if (preference == Preference.First) {
+            dataModel.gameState.turn.toInt() % 2 == 0
+        } else {
+            dataModel.gameState.turn.toInt() % 2 == 1
+        }
     }
     var gamePaused by rememberSaveable { mutableStateOf(false) }
 
@@ -94,13 +93,12 @@ fun GameScreen(
             val sendData = {
                 if (gameMode == GameMode.Online) {
                     connectionService.sendData(
-                        DataModel(
-                            GameState(
+                        connectionService.receivedDataModel!!.copy(
+                            gameState = GameState(
                                 board = grid.map { it.map { e -> e.name } },
-                                turn = "true",
-                                connectionEstablished = true,
-                            ),
-                            MetaData(emptyList(), MiniGame("X", "O"))
+                                turn = "${connectionService.receivedDataModel!!.gameState.turn.toInt() + 1}",
+                                connectionEstablished = true
+                            )
                         )
                     )
                 }
@@ -123,7 +121,7 @@ fun GameScreen(
             }
         }
     }
-    DisposableEffect(context) {
+    DisposableEffect(Unit) {
         onDispose {
             connectionService.setOnDataReceived()
             connectionService.stopDiscovery()

@@ -10,32 +10,28 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.akheparasu.tic_tac_toe.ui.RoundedRectButton
 import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
+import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
 import com.akheparasu.tic_tac_toe.utils.Preference
 
 @SuppressLint("MissingPermission")
 @Composable
 fun PrefDialog() {
-    val context = LocalContext.current
     val navController = LocalNavController.current
     val connectionService = LocalConnectionService.current
     val selectedDevice = connectionService.connectedDevice.collectAsState()
-    val isGameInitialised = connectionService.isGameInitialised.collectAsState()
+    val onlineSetupStage = connectionService.onlineSetupStage.collectAsState()
     val prefClickAction: (Preference) -> Unit = {
         if (connectionService.receivedDataModel == null) {
             if (selectedDevice.value == null) {
-                connectionService.setShowPlayOnlineDialog(false)
+                connectionService.setOnlineSetupStage(OnlineSetupStage.Idle)
             } else {
                 connectionService.sendData(
                     DataModel(
@@ -61,13 +57,26 @@ fun PrefDialog() {
                         )
                     )
                 )
+                connectionService.setOnlineSetupStage(OnlineSetupStage.Initialised)
             }
         }
     }
 
-    DisposableEffect(context) {
+    DisposableEffect(Unit) {
         onDispose {
-            connectionService.setIsGameInitialised(false)
+            if (onlineSetupStage.value == OnlineSetupStage.GameStart) {
+                navController?.navigate(
+                    "game/${GameMode.Online.name}/${
+                        if (selectedDevice.value?.address == connectionService.receivedDataModel!!.metaData.miniGame.player1Choice) {
+                            Preference.Second.name
+                        } else {
+                            Preference.First.name
+                        }
+                    }/${selectedDevice.value?.address}"
+                )
+            } else if (onlineSetupStage.value != OnlineSetupStage.Initialised) {
+                connectionService.receivedDataModel = null
+            }
         }
     }
 
@@ -77,7 +86,7 @@ fun PrefDialog() {
         title = { Text("Select Who Goes First") },
         text = {
             Column(verticalArrangement = Arrangement.Center) {
-                if (!isGameInitialised.value) {
+                if (onlineSetupStage.value == OnlineSetupStage.Preference) {
                     RoundedRectButton(
                         onClick = { prefClickAction(Preference.First) },
                         text = "Me"
@@ -87,10 +96,12 @@ fun PrefDialog() {
                         onClick = { prefClickAction(Preference.Second) },
                         text = "Opponent"
                     )
-                } else if (connectionService.receivedDataModel != null) {
+                } else if (connectionService.receivedDataModel != null &&
+                    onlineSetupStage.value == OnlineSetupStage.GameStart
+                ) {
                     RoundedRectButton(
                         onClick = {
-                            connectionService.sendData(DataModel(
+                            connectionService.receivedDataModel = DataModel(
                                 gameState = GameState(connectionEstablished = true),
                                 metaData = MetaData(
                                     choices = listOf(
@@ -109,17 +120,9 @@ fun PrefDialog() {
                                         }
                                     )
                                 )
-                            ))
-                            navController?.navigate(
-                                "game/${GameMode.Online.name}/${
-                                    if (selectedDevice.value?.address == connectionService.receivedDataModel!!.metaData.miniGame.player1Choice) {
-                                        Preference.Second.name
-                                    } else {
-                                        Preference.First.name
-                                    }
-                                }/${selectedDevice.value?.address}"
                             )
-                            connectionService.setShowPlayOnlineDialog(false)
+                            connectionService.sendData(connectionService.receivedDataModel!!)
+                            connectionService.setOnlineSetupStage(OnlineSetupStage.GameStart)
                         },
                         text = "Play"
                     )
@@ -129,7 +132,7 @@ fun PrefDialog() {
                     connectionService.sendData(
                         DataModel(gameState = GameState(connectionEstablished = false))
                     )
-                    connectionService.setShowPlayOnlineDialog(false)
+                    connectionService.setOnlineSetupStage(OnlineSetupStage.Idle)
                 }, text = "Cancel")
             }
         },

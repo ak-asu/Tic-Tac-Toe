@@ -97,3 +97,11 @@ enum class GameResult {
         }
     }
 }
+
+enum class OnlineSetupStage {
+    Preference,
+    Initialised,
+    GameStart,
+    NoService,
+    Idle;
+}

@@ -1,5 +1,8 @@
 package com.akheparasu.tic_tac_toe.screens
 
+import android.bluetooth.BluetoothAdapter
+import android.content.Intent
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -24,6 +27,7 @@ import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
+import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
 import com.akheparasu.tic_tac_toe.utils.Preference
 
 
@@ -32,20 +36,41 @@ fun HomeScreen() {
     val navController = LocalNavController.current
     val settings = LocalSettings.current
     val connectionService = LocalConnectionService.current
+    val onlineSetupStage = connectionService.onlineSetupStage.collectAsState()
     val showDevicesDialog = rememberSaveable { mutableStateOf(false) }
     val showPrefDialog = rememberSaveable { mutableStateOf(false) }
     val gameMode = rememberSaveable { mutableStateOf<GameMode?>(null) }
     val playerPrefFlow = settings.playerPrefFlow.collectAsState(initial = Preference.AskEveryTime)
+    val btEnableLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { _ ->
+        if (connectionService.isBtEnabled()) {
+            showDevicesDialog.value = true
+        }
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        showDevicesDialog.value = permissions.values.all { it } && gameMode.value == GameMode.Online
+        val canShowDevicesDialog = permissions.values.all { it } && gameMode.value == GameMode.Online
+        if (canShowDevicesDialog) {
+            if (!connectionService.isBtEnabled()) {
+                btEnableLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+            } else {
+                showDevicesDialog.value = true
+            }
+        }
     }
 
     LaunchedEffect(gameMode.value) {
         if (gameMode.value == GameMode.Online) {
             val allPermissions = connectionService.getMissingPermissions()
-            permissionLauncher.launch(allPermissions)
+            permissionLauncher.launch(allPermissions.first)
+            gameMode.value = null
+        }
+    }
+    LaunchedEffect(onlineSetupStage.value) {
+        if (onlineSetupStage.value == OnlineSetupStage.NoService) {
+            showDevicesDialog.value = false
         }
     }
 
@@ -98,16 +123,7 @@ fun HomeScreen() {
             )
         }
         if (showDevicesDialog.value) {
-            DevicesDialog(
-                onDismiss = {
-                    showDevicesDialog.value = false
-                    gameMode.value = null
-                },
-//                onDeviceSelected = { device, pref ->
-//                    navController?.navigate(getGamePath(GameMode.Online, pref, device.address))
-//                    gameMode.value = null
-//                }
-            )
+            DevicesDialog(onDismiss = { showDevicesDialog.value = false } )
         }
         RoundedRectButton(onClick = {
             gameMode.value = GameMode.Computer

@@ -34,6 +34,7 @@ import com.akheparasu.tic_tac_toe.utils.LocalAudioPlayer
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
+import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
 import com.akheparasu.tic_tac_toe.utils.Preference
 
 
@@ -49,7 +50,6 @@ class MainActivity : ComponentActivity() {
             CareerViewModelFactory(application)
         }
         connectionService = Connections(this)
-        connectionService.registerReceiver()
         setContent {
             val navController: NavHostController = rememberNavController()
             CompositionLocalProvider(
@@ -58,14 +58,14 @@ class MainActivity : ComponentActivity() {
                 LocalConnectionService provides connectionService,
                 LocalAudioPlayer provides audioPlayerContext,
             ) {
-                val showPlayOnlineDialog =
-                    connectionService.showPlayOnlineDialog.collectAsState(initial = false)
+                val onlineSetupStage = connectionService.onlineSetupStage.collectAsState()
                 TicTacToeTheme {
                     Scaffold(
                         topBar = { AppBar() },
                         modifier = Modifier.fillMaxSize()
                     ) { innerPadding ->
-                        if (showPlayOnlineDialog.value) {
+                        if (onlineSetupStage.value == OnlineSetupStage.Preference ||
+                            onlineSetupStage.value == OnlineSetupStage.Initialised) {
                             PrefDialog()
                         }
                         NavHost(
@@ -130,6 +130,15 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (connectionService.getMissingPermissions().first.isNotEmpty()
+            || !connectionService.isBtEnabled()
+        ) {
+            connectionService.setOnlineSetupStage(OnlineSetupStage.NoService)
         }
     }
 
