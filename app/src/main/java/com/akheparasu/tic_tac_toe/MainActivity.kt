@@ -1,7 +1,6 @@
 package com.akheparasu.tic_tac_toe
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -17,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.akheparasu.tic_tac_toe.audio.AudioPlayer
 import com.akheparasu.tic_tac_toe.multiplayer.Connections
+import com.akheparasu.tic_tac_toe.multiplayer.PrefDialog
 import com.akheparasu.tic_tac_toe.screens.CareerScreen
 import com.akheparasu.tic_tac_toe.screens.CareerViewModel
 import com.akheparasu.tic_tac_toe.screens.CareerViewModelFactory
@@ -48,6 +49,7 @@ class MainActivity : ComponentActivity() {
             CareerViewModelFactory(application)
         }
         connectionService = Connections(this)
+        connectionService.registerReceiver()
         setContent {
             val navController: NavHostController = rememberNavController()
             CompositionLocalProvider(
@@ -56,11 +58,16 @@ class MainActivity : ComponentActivity() {
                 LocalConnectionService provides connectionService,
                 LocalAudioPlayer provides audioPlayerContext,
             ) {
+                val showPlayOnlineDialog =
+                    connectionService.showPlayOnlineDialog.collectAsState(initial = false)
                 TicTacToeTheme {
                     Scaffold(
                         topBar = { AppBar() },
                         modifier = Modifier.fillMaxSize()
                     ) { innerPadding ->
+                        if (showPlayOnlineDialog.value) {
+                            PrefDialog()
+                        }
                         NavHost(
                             navController = navController,
                             startDestination = "home",
@@ -78,13 +85,11 @@ class MainActivity : ComponentActivity() {
                                 )
                                 val originalConnectedDeviceAddress =
                                     backStackEntry.arguments?.getString("deviceAddress")
-                                Log.e("yoyo", originalConnectedDeviceAddress?:"")
                                 if (GameMode.entries.map { mode -> mode.name }
                                         .contains(gameModeName)) {
                                     val gameMode = GameMode.valueOf(gameModeName!!)
                                     if (gameMode == GameMode.Online) {
                                         if (originalConnectedDeviceAddress != null) {
-                                            audioPlayerContext.onGameStart()
                                             GameScreen(
                                                 gameMode,
                                                 preference,
@@ -92,7 +97,6 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
                                     } else {
-                                        audioPlayerContext.onGameStart()
                                         GameScreen(
                                             gameMode,
                                             preference,

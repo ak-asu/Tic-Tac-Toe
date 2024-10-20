@@ -70,7 +70,6 @@ fun SettingsDialog() {
                     VolumeSlider()
                     ThemeToggle()
                     PlayerPrefMenu()
-                    OnlinePrefMenu()
                 }
             },
             confirmButton = { }
@@ -244,79 +243,6 @@ fun PlayerPrefMenu() {
                     selectedOption = it
                     coroutineScope.launch {
                         settingsDataStore.savePlayerPref(it)
-                    }
-                    expanded = false
-                }, text = { Text(text = it.name) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun OnlinePrefMenu() {
-    val settingsDataStore = LocalSettings.current
-    val coroutineScope = rememberCoroutineScope()
-
-    val options = Preference.entries.toList()
-    var selectedOption by remember { mutableStateOf(Preference.AskEveryTime) }
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    var pressOffset by remember { mutableStateOf(DpOffset.Zero) }
-    var itemHeight by remember { mutableStateOf(0.dp) }
-    val interactionSource = remember { MutableInteractionSource() }
-    val density = LocalDensity.current
-
-    LaunchedEffect(Unit) {
-        settingsDataStore.onlinePrefFlow.collect { onlinePref ->
-            selectedOption = onlinePref
-        }
-    }
-
-    Card(
-        modifier = Modifier
-            .padding(4.dp)
-            .onSizeChanged {
-                itemHeight = with(density) { it.height.toDp() }
-            }
-    ) {
-        Box(
-            modifier = Modifier
-                .height(64.dp)
-                .indication(interactionSource, LocalIndication.current)
-                .pointerInput(true) {
-                    detectTapGestures(
-                        onPress = {
-                            expanded = !expanded
-                            pressOffset = DpOffset(it.x.toDp(), it.y.toDp())
-                            val press = PressInteraction.Press(it)
-                            interactionSource.emit(press)
-                            tryAwaitRelease()
-                            interactionSource.emit(PressInteraction.Release(press))
-                        }
-                    )
-                }
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "Online Preference", modifier = Modifier.padding(8.dp))
-                Text(text = selectedOption.name, modifier = Modifier.padding(8.dp))
-            }
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            offset = pressOffset.copy(
-                y = pressOffset.y - itemHeight
-            )
-        ) {
-            options.forEach {
-                DropdownMenuItem(onClick = {
-                    selectedOption = it
-                    coroutineScope.launch {
-                        settingsDataStore.saveOnlinePref(it)
                     }
                     expanded = false
                 }, text = { Text(text = it.name) }

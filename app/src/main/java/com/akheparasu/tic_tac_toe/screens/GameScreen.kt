@@ -82,10 +82,10 @@ fun GameScreen(
     } else {
         null
     }
-    connectionService.onDataReceived = { dataModel ->
+    connectionService.setOnDataReceived { dataModel ->
         grid = dataModel.gameState.board.map { r -> r.map { GridEntry.valueOf(it) }.toTypedArray() }
             .toTypedArray()
-        playerTurn = dataModel.gameState.turn == "true"
+        playerTurn = dataModel.gameState.turn == "0"
     }
     var gamePaused by rememberSaveable { mutableStateOf(false) }
 
@@ -98,10 +98,7 @@ fun GameScreen(
                             GameState(
                                 board = grid.map { it.map { e -> e.name } },
                                 turn = "true",
-                                winner = null,
-                                draw = false,
                                 connectionEstablished = true,
-                                reset = false,
                             ),
                             MetaData(emptyList(), MiniGame("X", "O"))
                         )
@@ -128,9 +125,8 @@ fun GameScreen(
     }
     DisposableEffect(context) {
         onDispose {
-            connectionService.onDataReceived = null
+            connectionService.setOnDataReceived()
             connectionService.stopDiscovery()
-            connectionService.unregisterReceiver()
         }
     }
 

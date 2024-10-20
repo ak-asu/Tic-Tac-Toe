@@ -103,10 +103,10 @@ fun HomeScreen() {
                     showDevicesDialog.value = false
                     gameMode.value = null
                 },
-                onDeviceSelected = { device, pref ->
-                    navController?.navigate(getGamePath(GameMode.Online, pref, device.address))
-                    gameMode.value = null
-                }
+//                onDeviceSelected = { device, pref ->
+//                    navController?.navigate(getGamePath(GameMode.Online, pref, device.address))
+//                    gameMode.value = null
+//                }
             )
         }
         RoundedRectButton(onClick = {
