@@ -1,6 +1,7 @@
 package com.akheparasu.tic_tac_toe.multiplayer
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -10,7 +11,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -29,36 +29,34 @@ fun PrefDialog() {
     val selectedDevice = connectionService.connectedDevice.collectAsState()
     val onlineSetupStage = connectionService.onlineSetupStage.collectAsState()
     val prefClickAction: (Preference) -> Unit = {
-        if (connectionService.receivedDataModel == null) {
-            if (selectedDevice.value == null) {
-                connectionService.setOnlineSetupStage(OnlineSetupStage.Idle)
-            } else {
-                connectionService.sendData(
-                    DataModel(
-                        gameState = GameState(connectionEstablished = true),
-                        metaData = MetaData(
-                            choices = listOf(
-                                PlayerChoice(
-                                    id = "player1",
-                                    name = ""
-                                ),
-                                PlayerChoice(
-                                    id = "player2",
-                                    name = selectedDevice.value!!.address
-                                )
+        if (selectedDevice.value == null) {
+            connectionService.setOnlineSetupStage(OnlineSetupStage.Idle)
+        } else {
+            connectionService.sendData(
+                DataModel(
+                    gameState = GameState(connectionEstablished = true),
+                    metaData = MetaData(
+                        choices = listOf(
+                            PlayerChoice(
+                                id = "player1",
+                                name = ""
                             ),
-                            miniGame = MiniGame(
-                                player1Choice = if (it == Preference.Second) {
-                                    selectedDevice.value!!.address
-                                } else {
-                                    ""
-                                }
+                            PlayerChoice(
+                                id = "player2",
+                                name = selectedDevice.value!!.address
                             )
+                        ),
+                        miniGame = MiniGame(
+                            player1Choice = if (it == Preference.Second) {
+                                selectedDevice.value!!.address
+                            } else {
+                                ""
+                            }
                         )
                     )
                 )
-                connectionService.setOnlineSetupStage(OnlineSetupStage.Initialised)
-            }
+            )
+            connectionService.setOnlineSetupStage(OnlineSetupStage.Initialised)
         }
     }
 
@@ -97,7 +95,7 @@ fun PrefDialog() {
                         text = "Opponent"
                     )
                 } else if (connectionService.receivedDataModel != null &&
-                    onlineSetupStage.value == OnlineSetupStage.GameStart
+                    onlineSetupStage.value == OnlineSetupStage.Initialised
                 ) {
                     RoundedRectButton(
                         onClick = {
