@@ -7,6 +7,7 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -20,12 +21,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -67,7 +66,7 @@ fun DevicesDialog(onDismiss: () -> Unit) {
         onDispose {
             lifecycle.removeObserver(observer)
             connectionService.stopDiscovery()
-            connectionService.unRegisterLocReceiver()
+            connectionService.unregisterLocReceiver()
         }
     }
 
@@ -76,7 +75,10 @@ fun DevicesDialog(onDismiss: () -> Unit) {
         onDismissRequest = { onDismiss() },
         title = { Text("Select Device") },
         text = {
-            Column {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 val discoveredDevices =
                     devices.value.filter { it.bondState != BluetoothDevice.BOND_BONDED }
                 val pairedDevices =

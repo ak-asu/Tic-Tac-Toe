@@ -2,7 +2,7 @@ package com.akheparasu.tic_tac_toe.multiplayer
 
 
 data class DataModel(
-    val gameState: GameState,
+    val gameState: GameState = GameState(),
     val metaData: MetaData = MetaData()
 )
 
@@ -11,7 +11,7 @@ data class GameState(
     val turn: String = "0",
     val winner: String = "",
     val draw: Boolean = false,
-    val connectionEstablished: Boolean,
+    val connectionEstablished: Boolean = true,
     val reset: Boolean = false
 )
 

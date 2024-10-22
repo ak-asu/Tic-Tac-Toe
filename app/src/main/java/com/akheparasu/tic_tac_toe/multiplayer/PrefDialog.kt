@@ -1,17 +1,16 @@
 package com.akheparasu.tic_tac_toe.multiplayer
 
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.akheparasu.tic_tac_toe.ui.RoundedRectButton
@@ -79,11 +78,13 @@ fun PrefDialog() {
     }
 
     AlertDialog(
-        modifier = Modifier.fillMaxHeight(0.75f),
         onDismissRequest = { },
         title = { Text("Select Who Goes First") },
         text = {
-            Column(verticalArrangement = Arrangement.Center) {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 if (onlineSetupStage.value == OnlineSetupStage.Preference) {
                     RoundedRectButton(
                         onClick = { prefClickAction(Preference.First) },

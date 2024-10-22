@@ -27,13 +27,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import com.akheparasu.tic_tac_toe.algorithms.AlgoController
+import com.akheparasu.tic_tac_toe.algorithms.runAITurn
 import com.akheparasu.tic_tac_toe.multiplayer.GameState
 import com.akheparasu.tic_tac_toe.ui.RoundedRectButton
 import com.akheparasu.tic_tac_toe.utils.Difficulty
@@ -46,6 +45,7 @@ import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
 import com.akheparasu.tic_tac_toe.utils.Preference
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 
 @Composable
 fun GameScreen(
@@ -53,7 +53,16 @@ fun GameScreen(
     preference: Preference,
     originalConnectedDeviceAddress: String?
 ) {
-    val algoController = AlgoController(gameMode)
+    val playerMarker = if (preference == Preference.First) {
+        GridEntry.X
+    } else {
+        GridEntry.O
+    }
+    val opponentMarker = if (playerMarker == GridEntry.X) {
+        GridEntry.O
+    } else {
+        GridEntry.X
+    }
     val settings = LocalSettings.current
     val navController = LocalNavController.current
     val audioController = LocalAudioPlayer.current
@@ -78,40 +87,43 @@ fun GameScreen(
         null
     }
     connectionService.setOnDataReceived { dataModel ->
+        connectionService.receivedDataModel = dataModel
         grid = dataModel.gameState.board.map { r -> r.map { GridEntry.valueOf(it) }.toTypedArray() }
             .toTypedArray()
-        playerTurn = if (preference == Preference.First) {
-            dataModel.gameState.turn.toInt() % 2 == 0
+        if (dataModel.gameState.winner != "") {
+            // TODO
+        } else if (dataModel.gameState.draw) {
+            // TODO
         } else {
-            dataModel.gameState.turn.toInt() % 2 == 1
+            playerTurn = if (preference == Preference.First) {
+                dataModel.gameState.turn.toInt() % 2 == 0
+            } else {
+                dataModel.gameState.turn.toInt() % 2 == 1
+            }
         }
     }
     var gamePaused by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(playerTurn) {
         if (!playerTurn && gameMode != GameMode.Human) {
-            val sendData = {
-                if (gameMode == GameMode.Online) {
-                    connectionService.sendData(
-                        connectionService.receivedDataModel!!.copy(
-                            gameState = GameState(
-                                board = grid.map { it.map { e -> e.name } },
-                                turn = "${connectionService.receivedDataModel!!.gameState.turn.toInt() + 1}",
-                                connectionEstablished = true
-                            )
+            if (gameMode == GameMode.Computer) {
+                grid = async {
+                    delay(1000)
+                    runAITurn(grid, difficultyFlow.value)
+                }.await()
+                isGameComplete(grid)
+                playerTurn = true
+            } else if (gameMode == GameMode.Online) {
+                connectionService.sendData(
+                    connectionService.receivedDataModel!!.copy(
+                        gameState = GameState(
+                            board = grid.map { it.map { e -> e.name } },
+                            turn = "${connectionService.receivedDataModel!!.gameState.turn.toInt() + 1}",
+                            connectionEstablished = true
                         )
                     )
-                }
-            }
-            grid = async {
-                algoController.runOpponentTurn(
-                    grid,
-                    difficultyFlow.value,
-                    sendData
                 )
-            }.await()
-            isGameComplete(grid)
-            playerTurn = true
+            }
         }
     }
     if (gameMode == GameMode.Online) {
@@ -122,6 +134,7 @@ fun GameScreen(
         }
     }
     DisposableEffect(Unit) {
+        audioController.onGameStart()
         onDispose {
             connectionService.setOnDataReceived()
             connectionService.stopDiscovery()
@@ -145,7 +158,7 @@ fun GameScreen(
         ) {
             Row {
                 Text(
-                    text = "Player: X", fontWeight = if (playerTurn) {
+                    text = "Player: ${playerMarker.name}", fontWeight = if (playerTurn) {
                         FontWeight.Bold
                     } else {
                         FontWeight.Thin
@@ -153,7 +166,7 @@ fun GameScreen(
                 )
                 Text(text = " | ")
                 Text(
-                    text = "Opponent: O", fontWeight = if (playerTurn) {
+                    text = "Opponent: ${opponentMarker.name}", fontWeight = if (playerTurn) {
                         FontWeight.Thin
                     } else {
                         FontWeight.Bold
@@ -175,10 +188,10 @@ fun GameScreen(
                             onTap = {
                                 if (grid[i][j] == GridEntry.E) {
                                     if (playerTurn) {
-                                        grid[i][j] = GridEntry.X
+                                        grid[i][j] = playerMarker
                                         playerTurn = false
                                         //Check for the win condition
-                                        if (checkWinner(grid)?.equals(GridEntry.X) == true) {
+                                        if (checkWinner(grid)?.equals(playerMarker) == true) {
                                             navController?.navigate("score/${gameMode.name}/${difficultyFlow.value}/${GameResult.Win}")
                                         } else {
                                             audioController.onPlayerTap()
@@ -186,10 +199,10 @@ fun GameScreen(
                                     } else {
                                         //Player 2 Game Mode
                                         if (gameMode == GameMode.Human) {
-                                            grid[i][j] = GridEntry.O
+                                            grid[i][j] = opponentMarker
                                             playerTurn = true
                                             //Check for the win condition
-                                            if (checkWinner(grid)?.equals(GridEntry.O) == true) {
+                                            if (checkWinner(grid)?.equals(opponentMarker) == true) {
                                                 navController?.navigate("score/${gameMode.name}/${null}/${GameResult.Fail}")
                                             } else {
                                                 audioController.onOpponentTap()
@@ -203,9 +216,9 @@ fun GameScreen(
                                             )
                                             //Check for the win condition
 
-                                            if (checkWinner(grid)?.equals(GridEntry.O) == true) {
+                                            if (checkWinner(grid)?.equals(opponentMarker) == true) {
 
-                                            } else if (checkWinner(grid)?.equals(GridEntry.X) == true) {
+                                            } else if (checkWinner(grid)?.equals(playerMarker) == true) {
 
                                             }
                                         }
@@ -220,7 +233,7 @@ fun GameScreen(
 
             RoundedRectButton(onClick = {
                 grid = Array(3) { Array(3) { GridEntry.E } }
-                playerTurn = true
+                playerTurn = preference == Preference.First
             }, text = "Reset Game")
         }
     }

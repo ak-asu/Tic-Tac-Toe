@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.GameResult
+import com.akheparasu.tic_tac_toe.utils.LocalAudioPlayer
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 
 @Composable
@@ -24,6 +26,16 @@ fun ScoreScreen(
     gameResult: GameResult,
 ) {
     val navController = LocalNavController.current
+    val audioController = LocalAudioPlayer.current
+
+    DisposableEffect(Unit) {
+        when (gameResult) {
+            GameResult.Win -> audioController.onWin()
+            GameResult.Fail -> audioController.onFail()
+            GameResult.Draw -> audioController.onDraw()
+        }
+        onDispose { }
+    }
 
     Column(
         modifier = Modifier

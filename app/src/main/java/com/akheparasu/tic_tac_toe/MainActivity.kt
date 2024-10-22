@@ -65,7 +65,8 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize()
                     ) { innerPadding ->
                         if (onlineSetupStage.value == OnlineSetupStage.Preference ||
-                            onlineSetupStage.value == OnlineSetupStage.Initialised) {
+                            onlineSetupStage.value == OnlineSetupStage.Initialised
+                        ) {
                             PrefDialog()
                         }
                         NavHost(
@@ -117,11 +118,6 @@ class MainActivity : ComponentActivity() {
                                 if (GameMode.entries.map { mode -> mode.name }
                                         .contains(gameModeName)) {
                                     val gameMode = GameMode.valueOf(gameModeName!!)
-                                    when (gameResult) {
-                                        GameResult.Win -> audioPlayerContext.onWin()
-                                        GameResult.Fail -> audioPlayerContext.onFail()
-                                        GameResult.Draw -> audioPlayerContext.onDraw()
-                                    }
                                     ScoreScreen(gameMode, difficulty, gameResult)
                                 }
                             }
@@ -144,6 +140,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        connectionService.dispose()
+        connectionService.unregisterReceiver()
     }
 }
