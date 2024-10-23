@@ -1,6 +1,7 @@
 package com.akheparasu.tic_tac_toe
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -11,6 +12,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -28,6 +30,7 @@ import com.akheparasu.tic_tac_toe.settings.SettingsDataStore
 import com.akheparasu.tic_tac_toe.ui.AppBar
 import com.akheparasu.tic_tac_toe.ui.theme.TicTacToeTheme
 import com.akheparasu.tic_tac_toe.utils.Difficulty
+import com.akheparasu.tic_tac_toe.utils.FunctionParcel
 import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.GameResult
 import com.akheparasu.tic_tac_toe.utils.LocalAudioPlayer
@@ -86,27 +89,38 @@ class MainActivity : ComponentActivity() {
                                 )
                                 val originalConnectedDeviceAddress =
                                     backStackEntry.arguments?.getString("deviceAddress")
+                                val context = LocalContext.current
                                 if (GameMode.entries.map { mode -> mode.name }
                                         .contains(gameModeName)) {
                                     val gameMode = GameMode.valueOf(gameModeName!!)
                                     if (gameMode == GameMode.Online) {
-                                        if (originalConnectedDeviceAddress != null) {
+                                        val originalConnectedDevice =
+                                            connectionService.getBtDeviceFromAddress(
+                                                originalConnectedDeviceAddress
+                                            )
+                                        if (originalConnectedDevice != null) {
                                             GameScreen(
                                                 gameMode,
                                                 preference,
-                                                originalConnectedDeviceAddress
+                                                originalConnectedDevice
                                             )
+                                        } else {
+                                            navController.popBackStack()
+                                            Toast.makeText(context, "Connection error", Toast.LENGTH_SHORT).show()
                                         }
                                     } else {
                                         GameScreen(
                                             gameMode,
                                             preference,
-                                            originalConnectedDeviceAddress
+                                            null
                                         )
                                     }
+                                } else {
+                                    navController.popBackStack()
+                                    Toast.makeText(context, "Game selection error", Toast.LENGTH_SHORT).show()
                                 }
                             }
-                            composable("score/{gameModeName}/{difficulty}/{gameResult}") { backStackEntry ->
+                            composable("score/{gameModeName}/{difficulty}/{gameResult}/{gamePath}") { backStackEntry ->
                                 val gameModeName =
                                     backStackEntry.arguments?.getString("gameModeName")
                                 val difficulty = backStackEntry.arguments?.getString("difficulty")
@@ -115,10 +129,15 @@ class MainActivity : ComponentActivity() {
                                     backStackEntry.arguments?.getString("gameResult")
                                         ?: GameResult.Draw.name
                                 )
+                                val onReplay = backStackEntry.arguments?.getParcelable<FunctionParcel>("onReplayKey")?.function
+                                val context = LocalContext.current
                                 if (GameMode.entries.map { mode -> mode.name }
-                                        .contains(gameModeName)) {
+                                        .contains(gameModeName) && onReplay!=null) {
                                     val gameMode = GameMode.valueOf(gameModeName!!)
-                                    ScoreScreen(gameMode, difficulty, gameResult)
+                                    ScoreScreen(gameMode, difficulty, gameResult, onReplay)
+                                } else {
+                                    navController.popBackStack()
+                                    Toast.makeText(context, "Score screen error", Toast.LENGTH_SHORT).show()
                                 }
                             }
                             composable("career") { CareerScreen(careerViewModel) }

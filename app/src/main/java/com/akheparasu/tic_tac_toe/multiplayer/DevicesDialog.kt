@@ -21,6 +21,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -50,7 +51,12 @@ fun DevicesDialog(onDismiss: () -> Unit) {
         }
     }
 
-    // Update devices when new ones are discovered
+    LaunchedEffect(selectedDevice.value) {
+        if (selectedDevice.value != null) {
+            onDismiss()
+        }
+    }
+
     DisposableEffect(Unit) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -113,17 +119,7 @@ fun DevicesDialog(onDismiss: () -> Unit) {
 
             }
         },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (selectedDevice.value != null) {
-                        onDismiss()
-                        connectionService.setOnlineSetupStage(OnlineSetupStage.Preference)
-                    }
-                },
-                enabled = selectedDevice.value != null
-            ) { Text("Done") }
-        },
+        confirmButton = { },
         dismissButton = { Button(onClick = { onDismiss() }) { Text("Cancel") } }
     )
 }

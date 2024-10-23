@@ -64,7 +64,7 @@ fun PrefDialog() {
             if (onlineSetupStage.value == OnlineSetupStage.GameStart) {
                 navController?.navigate(
                     "game/${GameMode.Online.name}/${
-                        if (selectedDevice.value?.address == connectionService.receivedDataModel!!.metaData.miniGame.player1Choice) {
+                        if (selectedDevice.value?.address == connectionService.receivedDataModel.metaData.miniGame.player1Choice) {
                             Preference.Second.name
                         } else {
                             Preference.First.name
@@ -72,7 +72,7 @@ fun PrefDialog() {
                     }/${selectedDevice.value?.address}"
                 )
             } else if (onlineSetupStage.value != OnlineSetupStage.Initialised) {
-                connectionService.receivedDataModel = null
+                connectionService.receivedDataModel = DataModel()
             }
         }
     }
@@ -95,7 +95,7 @@ fun PrefDialog() {
                         onClick = { prefClickAction(Preference.Second) },
                         text = "Opponent"
                     )
-                } else if (connectionService.receivedDataModel != null &&
+                } else if (connectionService.receivedDataModel.metaData.choices.isNotEmpty() &&
                     onlineSetupStage.value == OnlineSetupStage.Initialised
                 ) {
                     RoundedRectButton(
@@ -108,19 +108,19 @@ fun PrefDialog() {
                                             id = "player1",
                                             name = selectedDevice.value!!.address
                                         ),
-                                        connectionService.receivedDataModel!!.metaData.choices.last()
+                                        connectionService.receivedDataModel.metaData.choices.last()
                                     ),
                                     miniGame = MiniGame(
-                                        player1Choice = connectionService.receivedDataModel!!.metaData.miniGame.player1Choice.ifEmpty {
+                                        player1Choice = connectionService.receivedDataModel.metaData.miniGame.player1Choice.ifEmpty {
                                             selectedDevice.value!!.address
                                         },
-                                        player2Choice = connectionService.receivedDataModel!!.metaData.miniGame.player1Choice.ifEmpty {
+                                        player2Choice = connectionService.receivedDataModel.metaData.miniGame.player1Choice.ifEmpty {
                                             selectedDevice.value!!.address
                                         }
                                     )
                                 )
                             )
-                            connectionService.sendData(connectionService.receivedDataModel!!)
+                            connectionService.sendData(connectionService.receivedDataModel)
                             connectionService.setOnlineSetupStage(OnlineSetupStage.GameStart)
                         },
                         text = "Play"

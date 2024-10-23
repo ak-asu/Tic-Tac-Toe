@@ -24,9 +24,10 @@ fun ScoreScreen(
     gameMode: GameMode,
     difficulty: Difficulty?,
     gameResult: GameResult,
+    onReplay: () -> Unit
 ) {
-    val navController = LocalNavController.current
     val audioController = LocalAudioPlayer.current
+    val navController = LocalNavController.current
 
     DisposableEffect(Unit) {
         when (gameResult) {
@@ -54,8 +55,9 @@ fun ScoreScreen(
         }
         Text(text = gameResult.getDisplayText())
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { navController?.popBackStack() }) {
-            Text(text = "Replay")
-        }
+        Button(onClick = {
+            navController?.popBackStack()
+            onReplay()
+        }) { Text(text = "Replay") }
     }
 }

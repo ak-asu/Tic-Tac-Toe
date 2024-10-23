@@ -1,7 +1,6 @@
 package com.akheparasu.tic_tac_toe.multiplayer
 
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothServerSocket
@@ -12,13 +11,20 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.LocationManager
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
 import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
-import com.akheparasu.tic_tac_toe.utils.retryTask
 import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.io.OutputStream
 import java.util.UUID
@@ -26,6 +32,7 @@ import java.util.UUID
 class Connections(private val context: Context) {
     private val appUUID = UUID.fromString("d8ea6ad2-5c66-4a16-a033-5b0b7e677f72")
     private val appName = "BluetoothTicTacToeASUApp25"
+    private val aliveString = "I am alive $appName"
 
     private val bluetoothManager by lazy {
         context.getSystemService(BluetoothManager::class.java)
@@ -50,7 +57,7 @@ class Connections(private val context: Context) {
     private var acceptThread: AcceptThread? = null
 
     private var onDataReceived: ((DataModel) -> Unit)? = null
-    var receivedDataModel: DataModel? = null
+    var receivedDataModel: DataModel = DataModel()
     private val _onlineSetupStage = MutableStateFlow(OnlineSetupStage.Idle)
     val onlineSetupStage: StateFlow<OnlineSetupStage> = _onlineSetupStage
 
@@ -67,8 +74,6 @@ class Connections(private val context: Context) {
             addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
             addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
             addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
-            addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
-            addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
         }
         context.registerReceiver(bluetoothReceiver, intentFilter)
         acceptThread?.cancel()
@@ -112,12 +117,14 @@ class Connections(private val context: Context) {
     fun startDiscovery(): Boolean {
         try {
             if (bluetoothAdapter?.isEnabled == true) {
+                _devices.value = bluetoothAdapter!!.bondedDevices.toMutableList()
                 if (bluetoothAdapter!!.isDiscovering) {
                     bluetoothAdapter!!.cancelDiscovery()
                 }
                 bluetoothAdapter!!.startDiscovery()
                 return true
             } else {
+                _devices.value = mutableListOf()
                 return false
             }
         } catch (_: Exception) {
@@ -175,18 +182,28 @@ class Connections(private val context: Context) {
 
     @SuppressLint("MissingPermission")
     private fun setupConnection(device: BluetoothDevice) {
-        retryTask({
-            try {
-                connectedThread?.cancel()
-                connectedThread = ConnectedThread(device)
-                connectedThread?.start()
-                deviceToConnect = null
-                true
-            } catch (e: Exception) {
-                e.printStackTrace()
-                false
+        CoroutineScope(Dispatchers.IO).launch {
+            val isConnected = withTimeoutOrNull(6000) {
+                try {
+                    connectedThread?.cancel()
+                    val socket = device.createRfcommSocketToServiceRecord(appUUID)
+                    connectedThread = ConnectedThread(device, socket)
+                    deviceToConnect = null
+                    true
+                } catch (_: IOException) {
+                    false
+                }
             }
-        }, 3000, 2)
+
+            withContext(Dispatchers.Main) {
+                if (isConnected == true) {
+                    connectedThread?.connect()
+                } else {
+                    Toast.makeText(context, "Connection lost", Toast.LENGTH_SHORT).show()
+                    setOnlineSetupStage(OnlineSetupStage.Idle)
+                }
+            }
+        }
     }
 
     inner class LocationReceiver : BroadcastReceiver() {
@@ -210,7 +227,6 @@ class Connections(private val context: Context) {
         override fun onReceive(context: Context, intent: Intent) {
             val missingPermissions = getMissingPermissions()
             if (missingPermissions.first.isNotEmpty()) {
-                context.unregisterReceiver(bluetoothReceiver)
                 return
             }
             when (intent.action) {
@@ -230,8 +246,11 @@ class Connections(private val context: Context) {
                     val device: BluetoothDevice? =
                         intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
                     device?.let {
-                        // todo
-                        connectedThread?.start()
+                        if (it.address == connectedThread?.getDevice()?.address &&
+                            connectedThread?.isThreadRunning() != true
+                        ) {
+                            connectedThread?.start()
+                        }
                         _devices.value = _devices.value.map { d ->
                             if (device.address == d.address) {
                                 device
@@ -246,7 +265,7 @@ class Connections(private val context: Context) {
                     val device: BluetoothDevice? =
                         intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
                     device?.let {
-                        if (it == _connectedDevice.value) {
+                        if (it.address == connectedThread?.getDevice()?.address) {
                             connectedThread?.cancel()
                         }
                         _devices.value = _devices.value.map { d ->
@@ -274,32 +293,6 @@ class Connections(private val context: Context) {
                             it.bondState == BluetoothDevice.BOND_BONDED
                         ) {
                             setupConnection(deviceToConnect!!)
-                        }
-                    }
-                }
-
-                BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED -> {
-                    val device: BluetoothDevice? =
-                        intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
-                    if (bluetoothAdapter?.isEnabled == false) {
-                        connectedThread?.cancel()
-                    }
-                    device?.let {
-                        _devices.value = _devices.value.map { d ->
-                            if (device.address == d.address) {
-                                device
-                            } else {
-                                d
-                            }
-                        }.toMutableList()
-                    }
-                }
-
-                BluetoothAdapter.ACTION_DISCOVERY_STARTED -> {
-                    bluetoothAdapter!!.bondedDevices.toList().forEach { d ->
-                        if (!_devices.value.any { prev -> d.address == prev.address }
-                        ) {
-                            _devices.value = _devices.value.toMutableList().apply { add(d) }
                         }
                     }
                 }
@@ -349,54 +342,68 @@ class Connections(private val context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    inner class ConnectedThread(device: BluetoothDevice, bluetoothSocket: BluetoothSocket? = null) :
+    inner class ConnectedThread(
+        private val device: BluetoothDevice,
+        private val clientSocket: BluetoothSocket? = null
+    ) :
         Thread() {
-        private val clientSocket: BluetoothSocket? by lazy(LazyThreadSafetyMode.NONE) {
-            stopDiscovery()
-            (bluetoothSocket ?: device.createRfcommSocketToServiceRecord(appUUID)).apply {
-                connect()
+        private val handler = Handler(Looper.getMainLooper())
+        private val runnable = object : Runnable {
+            override fun run() {
+                if (clientSocket?.isConnected == true) {
+                    handler.postDelayed(this, 10000)
+                    sendData(aliveString)
+                } else {
+                    handler.removeCallbacks(this)
+                }
             }
         }
 
         @Volatile
-        private var isRunning = true
+        private var isRunning = false
 
         override fun run() {
             clientSocket?.let {
+                if (isRunning) {
+                    return
+                }
+                isRunning = true
                 if (!it.isConnected) {
                     cancel()
                     return
                 }
                 _connectedDevice.value = it.remoteDevice!!
-                sendData(DataModel())
+                sendData(receivedDataModel)
+                handler.post(runnable)
                 val buffer = ByteArray(1024)
                 while (isRunning && it.isConnected) {
                     try {
                         val bytes = it.inputStream.read(buffer)
                         val data = String(buffer, 0, bytes)
                         if (data.isNotEmpty()) {
+                            if (data == aliveString) {
+                                continue
+                            }
                             val message = deserializeGameData(data)
+                            receivedDataModel = message
                             if (!message.gameState.connectionEstablished) {
                                 cancel()
                                 break
                             }
                             if (message.metaData.choices.isEmpty()) {
                                 setOnlineSetupStage(OnlineSetupStage.Preference)
+                            } else if (onlineSetupStage.value == OnlineSetupStage.Idle) {
+                                setOnlineSetupStage(OnlineSetupStage.Preference)
+                            } else if (onlineSetupStage.value == OnlineSetupStage.Preference) {
+                                setOnlineSetupStage(OnlineSetupStage.Initialised)
                             } else if (onlineSetupStage.value == OnlineSetupStage.Initialised) {
                                 if (message.metaData.miniGame.player2Choice.isEmpty()) {
-                                    receivedDataModel =
-                                        if (connectedDevice.value!!.address < message.metaData.choices.last().name) {
-                                            message
-                                        } else {
-                                            null
-                                        }
+                                    if (connectedDevice.value!!.address >= message.metaData.choices.last().name) {
+                                        receivedDataModel = DataModel()
+                                    }
                                 } else {
-                                    receivedDataModel = message
                                     setOnlineSetupStage(OnlineSetupStage.GameStart)
                                 }
-                            } else if (onlineSetupStage.value == OnlineSetupStage.Idle) {
-                                receivedDataModel = message
-                                setOnlineSetupStage(OnlineSetupStage.Initialised)
                             } else {
                                 onDataReceived?.let { it(message) }
                             }
@@ -408,27 +415,45 @@ class Connections(private val context: Context) {
             }
         }
 
-        fun sendData(dataModel: DataModel) {
+        fun sendData(data: String) {
             if (clientSocket?.isConnected == true) {
                 val outputStream: OutputStream = clientSocket!!.outputStream
-                val data = serializeGameData(dataModel)
                 outputStream.write(data.toByteArray())
                 //outputStream.flush()
                 //todo
             }
         }
 
+        fun getDevice(): BluetoothDevice {
+            return device
+        }
+
+        fun isThreadRunning(): Boolean {
+            return isRunning
+        }
+
+        fun connect() {
+            if (clientSocket?.isConnected == false) {
+                try {
+                    clientSocket.connect()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    cancel()
+                }
+            }
+        }
+
         fun cancel() {
-            receivedDataModel = null
+            receivedDataModel = DataModel()
+            handler.removeCallbacks(runnable)
             clientSocket?.close()
             _connectedDevice.value = null
-            setOnlineSetupStage(OnlineSetupStage.Idle)
             isRunning = false
         }
     }
 
     fun sendData(dataModel: DataModel) {
-        connectedThread?.sendData(dataModel)
+        connectedThread?.sendData(serializeGameData(dataModel))
     }
 
     fun setOnDataReceived(value: ((DataModel) -> Unit)? = null) {
@@ -437,7 +462,20 @@ class Connections(private val context: Context) {
 
     fun setOnlineSetupStage(value: OnlineSetupStage) {
         _onlineSetupStage.value = value
+        //todo
+//        if (value == OnlineSetupStage.Idle || value == OnlineSetupStage.NoService) {
+//            connectedThread?.cancel()
+//        }
         getMissingPermissions()
+    }
+
+    fun getBtDeviceFromAddress(value: String?): BluetoothDevice? {
+        return _devices.value.firstOrNull { it.address == value }
+    }
+
+    fun disconnectDevice() {
+        connectedThread?.cancel()
+        setOnlineSetupStage(OnlineSetupStage.Idle)
     }
 
     fun isBtEnabled(): Boolean {

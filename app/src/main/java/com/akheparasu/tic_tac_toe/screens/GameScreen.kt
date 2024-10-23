@@ -1,6 +1,10 @@
 package com.akheparasu.tic_tac_toe.screens
 
-import android.util.Log
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSizeIn
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -36,6 +41,7 @@ import com.akheparasu.tic_tac_toe.algorithms.runAITurn
 import com.akheparasu.tic_tac_toe.multiplayer.GameState
 import com.akheparasu.tic_tac_toe.ui.RoundedRectButton
 import com.akheparasu.tic_tac_toe.utils.Difficulty
+import com.akheparasu.tic_tac_toe.utils.FunctionParcel
 import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.GameResult
 import com.akheparasu.tic_tac_toe.utils.GridEntry
@@ -43,6 +49,7 @@ import com.akheparasu.tic_tac_toe.utils.LocalAudioPlayer
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
+import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
 import com.akheparasu.tic_tac_toe.utils.Preference
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -51,7 +58,7 @@ import kotlinx.coroutines.delay
 fun GameScreen(
     gameMode: GameMode,
     preference: Preference,
-    originalConnectedDeviceAddress: String?
+    originalConnectedDevice: BluetoothDevice?
 ) {
     val playerMarker = if (preference == Preference.First) {
         GridEntry.X
@@ -78,23 +85,67 @@ fun GameScreen(
     )
     var grid by rememberSaveable(saver = gridSaver) { mutableStateOf(Array(3) { Array(3) { GridEntry.E } }) }
     var playerTurn by rememberSaveable { mutableStateOf(preference == Preference.First) }
-    val isGameComplete: (Array<Array<GridEntry>>) -> Boolean =
-        { !it.any { c -> c.any { v -> v == GridEntry.E } } }
     val connectionService = LocalConnectionService.current
+    val onlineSetupStage = connectionService.onlineSetupStage.collectAsState()
     val connectedDevice = if (gameMode == GameMode.Online) {
         connectionService.connectedDevice.collectAsState(initial = null)
     } else {
         null
     }
+    val onGoToScoreScreen: (GameResult) -> Unit = {
+        if (gameMode == GameMode.Online && connectedDevice?.value?.address == originalConnectedDevice!!.address) {
+            val currentDeviceAddress =
+                if (originalConnectedDevice.address == connectionService.receivedDataModel.metaData.choices.first().name) {
+                    connectionService.receivedDataModel.metaData.choices.last().name
+                } else {
+                    connectionService.receivedDataModel.metaData.choices.first().name
+                }
+            connectionService.sendData(
+                connectionService.receivedDataModel.copy(
+                    gameState = GameState(
+                        winner = when(it) {
+                            GameResult.Win -> currentDeviceAddress
+                            GameResult.Fail -> originalConnectedDevice.address
+                            else -> " "
+                        },
+                        draw = it == GameResult.Draw
+                    )
+                )
+            )
+        }
+        navController?.currentBackStackEntry?.arguments?.putParcelable(
+            "onReplayKey",
+            FunctionParcel {
+                if (gameMode == GameMode.Online) {
+                    connectionService.receivedDataModel =
+                        connectionService.receivedDataModel.copy(
+                            gameState = GameState()
+                        )
+                    connectionService.setOnlineSetupStage(
+                        OnlineSetupStage.GameStart
+                    )
+                    connectionService.connectDevice(
+                        originalConnectedDevice!!
+                    )
+                }
+                navController.navigate("game/${gameMode.name}/${preference}/${originalConnectedDevice?.address}")
+            }
+        )
+        navController?.navigate("score/${gameMode.name}/${difficultyFlow.value}/${it.name}") {
+            popUpTo("home") { inclusive = false }
+        }
+    }
     connectionService.setOnDataReceived { dataModel ->
         connectionService.receivedDataModel = dataModel
         grid = dataModel.gameState.board.map { r -> r.map { GridEntry.valueOf(it) }.toTypedArray() }
             .toTypedArray()
-        if (dataModel.gameState.winner != "") {
-            // TODO
-        } else if (dataModel.gameState.draw) {
-            // TODO
-        } else {
+        if (!(dataModel.gameState.winner != "" || dataModel.gameState.draw)) {
+            when (checkWinner(grid)) {
+                GridEntry.X -> onGoToScoreScreen(GameResult.Win)
+                GridEntry.O -> onGoToScoreScreen(GameResult.Fail)
+                GridEntry.E -> onGoToScoreScreen(GameResult.Draw)
+                null -> {}
+            }
             playerTurn = if (preference == Preference.First) {
                 dataModel.gameState.turn.toInt() % 2 == 0
             } else {
@@ -111,25 +162,49 @@ fun GameScreen(
                     delay(1000)
                     runAITurn(grid, difficultyFlow.value)
                 }.await()
-                isGameComplete(grid)
                 playerTurn = true
             } else if (gameMode == GameMode.Online) {
                 connectionService.sendData(
-                    connectionService.receivedDataModel!!.copy(
+                    connectionService.receivedDataModel.copy(
                         gameState = GameState(
                             board = grid.map { it.map { e -> e.name } },
-                            turn = "${connectionService.receivedDataModel!!.gameState.turn.toInt() + 1}",
+                            turn = "${connectionService.receivedDataModel.gameState.turn.toInt() + 1}",
                             connectionEstablished = true
                         )
                     )
                 )
             }
         }
+        when (checkWinner(grid)) {
+            GridEntry.X -> onGoToScoreScreen(GameResult.Win)
+            GridEntry.O -> onGoToScoreScreen(GameResult.Fail)
+            GridEntry.E -> onGoToScoreScreen(GameResult.Draw)
+            null -> {}
+        }
+    }
+    val btEnableLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { _ ->
+        if (connectionService.isBtEnabled()) {
+            connectionService.connectDevice(originalConnectedDevice!!)
+        }
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions.values.all { it } && gameMode == GameMode.Online) {
+            btEnableLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+        }
     }
     if (gameMode == GameMode.Online) {
         LaunchedEffect(connectedDevice) {
-            if (connectedDevice?.value?.address != originalConnectedDeviceAddress) {
+            if (connectedDevice?.value?.address != originalConnectedDevice!!.address) {
                 gamePaused = true
+            }
+        }
+        LaunchedEffect(onlineSetupStage) {
+            if (onlineSetupStage.value == OnlineSetupStage.Idle) {
+                navController?.popBackStack()
             }
         }
     }
@@ -137,7 +212,7 @@ fun GameScreen(
         audioController.onGameStart()
         onDispose {
             connectionService.setOnDataReceived()
-            connectionService.stopDiscovery()
+            connectionService.disconnectDevice()
         }
     }
 
@@ -148,6 +223,11 @@ fun GameScreen(
 
     if (gamePaused) {
         Text("Game paused")
+        if (gameMode == GameMode.Online) {
+            Button(onClick = {
+                permissionLauncher.launch(connectionService.getMissingPermissions().first)
+            }) { Text("Reconnect") }
+        }
     } else {
         Column(
             modifier = Modifier
@@ -184,47 +264,26 @@ fun GameScreen(
                     for (j in 0 until 3) {
                         GridCell(
                             value = grid[i][j].getDisplayText(),
-                            maxCellSize = maxCellSize,
-                            onTap = {
-                                if (grid[i][j] == GridEntry.E) {
-                                    if (playerTurn) {
-                                        grid[i][j] = playerMarker
-                                        playerTurn = false
-                                        //Check for the win condition
-                                        if (checkWinner(grid)?.equals(playerMarker) == true) {
-                                            navController?.navigate("score/${gameMode.name}/${difficultyFlow.value}/${GameResult.Win}")
-                                        } else {
-                                            audioController.onPlayerTap()
-                                        }
+                            maxCellSize = maxCellSize
+                        ) {
+                            if (grid[i][j] == GridEntry.E) {
+                                if (playerTurn) {
+                                    grid[i][j] = playerMarker
+                                    playerTurn = false
+                                    if (checkWinner(grid)?.equals(playerMarker) == true) {
+                                        onGoToScoreScreen(GameResult.Win)
                                     } else {
-                                        //Player 2 Game Mode
-                                        if (gameMode == GameMode.Human) {
-                                            grid[i][j] = opponentMarker
-                                            playerTurn = true
-                                            //Check for the win condition
-                                            if (checkWinner(grid)?.equals(opponentMarker) == true) {
-                                                navController?.navigate("score/${gameMode.name}/${null}/${GameResult.Fail}")
-                                            } else {
-                                                audioController.onOpponentTap()
-                                            }
-                                        }
-                                        //Computer Game Mode
-                                        else {
-                                            Log.i(
-                                                "someTag",
-                                                "We will have computer take their turn"
-                                            )
-                                            //Check for the win condition
-
-                                            if (checkWinner(grid)?.equals(opponentMarker) == true) {
-
-                                            } else if (checkWinner(grid)?.equals(playerMarker) == true) {
-
-                                            }
-                                        }
+                                        audioController.onPlayerTap()
+                                    }
+                                } else {
+                                    if (gameMode == GameMode.Human) {
+                                        grid[i][j] = opponentMarker
+                                        playerTurn = true
+                                        audioController.onOpponentTap()
                                     }
                                 }
-                            })
+                            }
+                        }
                     }
                 }
             }
