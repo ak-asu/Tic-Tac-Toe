@@ -13,6 +13,7 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
@@ -65,6 +66,7 @@ class Connections(private val context: Context) {
         getMissingPermissions()
     }
 
+    @SuppressLint("MissingPermission")
     private fun registerReceiver() {
         if (isReceiverRegistered) {
             return
@@ -77,7 +79,8 @@ class Connections(private val context: Context) {
         }
         context.registerReceiver(bluetoothReceiver, intentFilter)
         acceptThread?.cancel()
-        acceptThread = AcceptThread()
+        val serverSocket = bluetoothAdapter?.listenUsingRfcommWithServiceRecord(appName, appUUID)
+        acceptThread = AcceptThread(serverSocket)
         acceptThread?.start()
         isReceiverRegistered = true
     }
@@ -149,10 +152,9 @@ class Connections(private val context: Context) {
         val missingPermissions = allPermissions.filter {
             ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
         }.toTypedArray()
-        val btMissingPermissions =
-            missingPermissions.filter { p -> p.contains("bluetooth") }.toTypedArray()
-        val remainingMissingPermissions =
-            missingPermissions.filter { p -> !p.contains("bluetooth") }.toTypedArray()
+        val (btMissingPermissions, remainingMissingPermissions) = missingPermissions.partition {
+            it.lowercase().contains("bluetooth")
+        }
         if (btMissingPermissions.isNotEmpty() || !isBtEnabled()) {
             _onlineSetupStage.value = OnlineSetupStage.NoService
             unregisterReceiver()
@@ -164,7 +166,7 @@ class Connections(private val context: Context) {
         } else {
             isLocEnabled.value = locIsEnabled()
         }
-        return Pair(btMissingPermissions, remainingMissingPermissions)
+        return Pair(btMissingPermissions.toTypedArray(), remainingMissingPermissions.toTypedArray())
     }
 
     @SuppressLint("MissingPermission")
@@ -247,7 +249,7 @@ class Connections(private val context: Context) {
                         intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
                     device?.let {
                         if (it.address == connectedThread?.getDevice()?.address &&
-                            connectedThread?.isThreadRunning() != true
+                            connectedThread?.isAlive != true
                         ) {
                             connectedThread?.start()
                         }
@@ -301,11 +303,7 @@ class Connections(private val context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    inner class AcceptThread : Thread() {
-        private val serverSocket: BluetoothServerSocket? by lazy(LazyThreadSafetyMode.NONE) {
-            bluetoothAdapter?.listenUsingRfcommWithServiceRecord(appName, appUUID)
-        }
-
+    inner class AcceptThread(private val serverSocket: BluetoothServerSocket?) : Thread() {
         @Volatile
         private var isRunning = true
 
@@ -325,8 +323,8 @@ class Connections(private val context: Context) {
                             bluetoothSocket
                         )
                         connectedThread?.start()
+                        cancel()
                     }
-                    cancel()
                 }
             }
         }
@@ -376,7 +374,7 @@ class Connections(private val context: Context) {
                 sendData(receivedDataModel)
                 handler.post(runnable)
                 val buffer = ByteArray(1024)
-                while (isRunning && it.isConnected) {
+                while (isRunning && it.isConnected && it.inputStream.available() > 0) {
                     try {
                         val bytes = it.inputStream.read(buffer)
                         val data = String(buffer, 0, bytes)
@@ -388,6 +386,7 @@ class Connections(private val context: Context) {
                             receivedDataModel = message
                             if (!message.gameState.connectionEstablished) {
                                 cancel()
+                                setOnlineSetupStage(OnlineSetupStage.Idle)
                                 break
                             }
                             if (message.metaData.choices.isEmpty()) {
@@ -417,10 +416,9 @@ class Connections(private val context: Context) {
 
         fun sendData(data: String) {
             if (clientSocket?.isConnected == true) {
-                val outputStream: OutputStream = clientSocket!!.outputStream
+                val outputStream: OutputStream = clientSocket.outputStream
                 outputStream.write(data.toByteArray())
-                //outputStream.flush()
-                //todo
+                outputStream.flush()
             }
         }
 
@@ -428,11 +426,7 @@ class Connections(private val context: Context) {
             return device
         }
 
-        fun isThreadRunning(): Boolean {
-            return isRunning
-        }
-
-        fun connect() {
+        suspend fun connect() {
             if (clientSocket?.isConnected == false) {
                 try {
                     clientSocket.connect()
@@ -444,6 +438,7 @@ class Connections(private val context: Context) {
         }
 
         fun cancel() {
+            Log.e("yoyo", "hello")
             receivedDataModel = DataModel()
             handler.removeCallbacks(runnable)
             clientSocket?.close()
@@ -462,10 +457,11 @@ class Connections(private val context: Context) {
 
     fun setOnlineSetupStage(value: OnlineSetupStage) {
         _onlineSetupStage.value = value
+        Log.e("hello", value.name)
         //todo
-//        if (value == OnlineSetupStage.Idle || value == OnlineSetupStage.NoService) {
-//            connectedThread?.cancel()
-//        }
+        if (value == OnlineSetupStage.Idle || value == OnlineSetupStage.NoService) {
+            connectedThread?.cancel()
+        }
         getMissingPermissions()
     }
 
@@ -492,6 +488,6 @@ class Connections(private val context: Context) {
     }
 
     private fun deserializeGameData(json: String): DataModel {
-        return Gson().fromJson(json, DataModel::class.java)
+        return Gson().fromJson(json.removeSuffix(aliveString), DataModel::class.java)
     }
 }

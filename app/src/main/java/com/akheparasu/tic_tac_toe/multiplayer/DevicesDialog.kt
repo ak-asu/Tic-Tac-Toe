@@ -41,7 +41,7 @@ fun DevicesDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val connectionService = LocalConnectionService.current
     val devices = connectionService.devices.collectAsState()
-    val selectedDevice = connectionService.connectedDevice.collectAsState()
+    val onlineSetupStage = connectionService.onlineSetupStage.collectAsState()
     val isLocEnabled by rememberSaveable { connectionService.isLocEnabled }
     val locEnableLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -51,8 +51,10 @@ fun DevicesDialog(onDismiss: () -> Unit) {
         }
     }
 
-    LaunchedEffect(selectedDevice.value) {
-        if (selectedDevice.value != null) {
+    LaunchedEffect(onlineSetupStage.value) {
+        if (!(onlineSetupStage.value == OnlineSetupStage.Idle ||
+                    onlineSetupStage.value == OnlineSetupStage.NoService)
+        ) {
             onDismiss()
         }
     }
@@ -60,7 +62,7 @@ fun DevicesDialog(onDismiss: () -> Unit) {
     DisposableEffect(Unit) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                if (connectionService.getMissingPermissions().second.isNotEmpty()) {
+                if (connectionService.getMissingPermissions().first.isNotEmpty()) {
                     onDismiss()
                 }
             }

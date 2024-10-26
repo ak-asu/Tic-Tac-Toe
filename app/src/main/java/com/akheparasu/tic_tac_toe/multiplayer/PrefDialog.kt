@@ -63,7 +63,7 @@ fun PrefDialog() {
         onDispose {
             if (onlineSetupStage.value == OnlineSetupStage.GameStart) {
                 navController?.navigate(
-                    "game/${GameMode.Online.name}/${
+                    "game/${GameMode.TwoDevices.name}/${
                         if (selectedDevice.value?.address == connectionService.receivedDataModel.metaData.miniGame.player1Choice) {
                             Preference.Second.name
                         } else {
@@ -131,7 +131,7 @@ fun PrefDialog() {
                     connectionService.sendData(
                         DataModel(gameState = GameState(connectionEstablished = false))
                     )
-                    connectionService.setOnlineSetupStage(OnlineSetupStage.Idle)
+                    connectionService.disconnectDevice()
                 }, text = "Cancel")
             }
         },

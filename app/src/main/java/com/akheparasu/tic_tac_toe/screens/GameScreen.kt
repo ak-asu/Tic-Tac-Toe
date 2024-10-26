@@ -1,10 +1,13 @@
 package com.akheparasu.tic_tac_toe.screens
 
+import android.app.Application
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,15 +33,24 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.akheparasu.tic_tac_toe.algorithms.runAITurn
 import com.akheparasu.tic_tac_toe.multiplayer.GameState
+import com.akheparasu.tic_tac_toe.storage.DataEntity
+import com.akheparasu.tic_tac_toe.storage.StorageDB
 import com.akheparasu.tic_tac_toe.ui.RoundedRectButton
 import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.FunctionParcel
@@ -51,14 +63,18 @@ import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
 import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
 import com.akheparasu.tic_tac_toe.utils.Preference
+import com.akheparasu.tic_tac_toe.utils.Winner
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.util.Date
 
 @Composable
 fun GameScreen(
     gameMode: GameMode,
     preference: Preference,
-    originalConnectedDevice: BluetoothDevice?
+    originalConnectedDevice: BluetoothDevice?,
+    addScoreViewModel: AddScoreViewModel
 ) {
     val playerMarker = if (preference == Preference.First) {
         GridEntry.X
@@ -87,13 +103,26 @@ fun GameScreen(
     var playerTurn by rememberSaveable { mutableStateOf(preference == Preference.First) }
     val connectionService = LocalConnectionService.current
     val onlineSetupStage = connectionService.onlineSetupStage.collectAsState()
-    val connectedDevice = if (gameMode == GameMode.Online) {
+    val connectedDevice = if (gameMode == GameMode.TwoDevices) {
         connectionService.connectedDevice.collectAsState(initial = null)
     } else {
         null
     }
     val onGoToScoreScreen: (GameResult) -> Unit = {
-        if (gameMode == GameMode.Online && connectedDevice?.value?.address == originalConnectedDevice!!.address) {
+        addScoreViewModel.insertScore(
+            if (it == GameResult.Win) {
+                Winner.Human
+            } else if (it == GameResult.Draw) {
+                Winner.Draw
+            } else {
+                if (gameMode == GameMode.Computer) {
+                    Winner.Computer
+                } else {
+                    Winner.Empty
+                }
+            }, gameMode, difficultyFlow.value
+        )
+        if (gameMode == GameMode.TwoDevices && connectedDevice?.value?.address == originalConnectedDevice!!.address) {
             val currentDeviceAddress =
                 if (originalConnectedDevice.address == connectionService.receivedDataModel.metaData.choices.first().name) {
                     connectionService.receivedDataModel.metaData.choices.last().name
@@ -103,7 +132,7 @@ fun GameScreen(
             connectionService.sendData(
                 connectionService.receivedDataModel.copy(
                     gameState = GameState(
-                        winner = when(it) {
+                        winner = when (it) {
                             GameResult.Win -> currentDeviceAddress
                             GameResult.Fail -> originalConnectedDevice.address
                             else -> " "
@@ -116,7 +145,7 @@ fun GameScreen(
         navController?.currentBackStackEntry?.arguments?.putParcelable(
             "onReplayKey",
             FunctionParcel {
-                if (gameMode == GameMode.Online) {
+                if (gameMode == GameMode.TwoDevices) {
                     connectionService.receivedDataModel =
                         connectionService.receivedDataModel.copy(
                             gameState = GameState()
@@ -156,14 +185,14 @@ fun GameScreen(
     var gamePaused by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(playerTurn) {
-        if (!playerTurn && gameMode != GameMode.Human) {
+        if (!playerTurn && gameMode != GameMode.OneDevice) {
             if (gameMode == GameMode.Computer) {
                 grid = async {
                     delay(1000)
                     runAITurn(grid, difficultyFlow.value)
                 }.await()
                 playerTurn = true
-            } else if (gameMode == GameMode.Online) {
+            } else if (gameMode == GameMode.TwoDevices) {
                 connectionService.sendData(
                     connectionService.receivedDataModel.copy(
                         gameState = GameState(
@@ -192,11 +221,11 @@ fun GameScreen(
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        if (permissions.values.all { it } && gameMode == GameMode.Online) {
+        if (permissions.values.all { it } && gameMode == GameMode.TwoDevices) {
             btEnableLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
         }
     }
-    if (gameMode == GameMode.Online) {
+    if (gameMode == GameMode.TwoDevices) {
         LaunchedEffect(connectedDevice) {
             if (connectedDevice?.value?.address != originalConnectedDevice!!.address) {
                 gamePaused = true
@@ -223,7 +252,7 @@ fun GameScreen(
 
     if (gamePaused) {
         Text("Game paused")
-        if (gameMode == GameMode.Online) {
+        if (gameMode == GameMode.TwoDevices) {
             Button(onClick = {
                 permissionLauncher.launch(connectionService.getMissingPermissions().first)
             }) { Text("Reconnect") }
@@ -276,7 +305,7 @@ fun GameScreen(
                                         audioController.onPlayerTap()
                                     }
                                 } else {
-                                    if (gameMode == GameMode.Human) {
+                                    if (gameMode == GameMode.OneDevice) {
                                         grid[i][j] = opponentMarker
                                         playerTurn = true
                                         audioController.onOpponentTap()
@@ -286,6 +315,14 @@ fun GameScreen(
                         }
                     }
                 }
+            }
+
+            if (false) {
+                MatchLineOverlay(
+                    startCell = 0,
+                    endCell = 0,
+                    cellSize = min(100.dp, maxCellSize.dp)
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -356,4 +393,69 @@ fun checkWinner(grid: Array<Array<GridEntry>>): GridEntry? {
     }
     // Return null if no one has won
     return null
+}
+
+@Composable
+fun MatchLineOverlay(
+    startCell: Int,
+    endCell: Int,
+    cellSize: Dp
+) {
+    val calculateCellOffset: @Composable (Int) -> Offset = {
+        with(LocalDensity.current) {
+            val row = it / 3
+            val column = it % 3
+            val x = column * cellSize.toPx() + cellSize.toPx() / 2
+            val y = row * cellSize.toPx() + cellSize.toPx() / 2
+            Offset(x, y)
+        }
+    }
+    val startOffset = calculateCellOffset(startCell)
+    val endOffset = calculateCellOffset(endCell)
+    val animationProgress by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(durationMillis = 1000), label = ""
+    )
+
+    Canvas(modifier = Modifier.requiredSizeIn(cellSize * 3)) {
+        val animatedEndX = startOffset.x + (endOffset.x - startOffset.x) * animationProgress
+        val animatedEndY = startOffset.y + (endOffset.y - startOffset.y) * animationProgress
+        drawLine(
+            color = Color.Red,
+            start = startOffset,
+            end = Offset(animatedEndX, animatedEndY),
+            strokeWidth = 8f
+        )
+    }
+}
+
+class AddScoreViewModel(application: Application) : AndroidViewModel(application) {
+    private val dataDao = StorageDB.getDatabase(application).dataDao()
+    fun insertScore(winner: Winner, gameMode: GameMode, difficulty: Difficulty) {
+        val dataEntity = DataEntity(
+            winner = winner,
+            gameMode = gameMode,
+            difficulty = if (gameMode == GameMode.Computer) {
+                difficulty
+            } else {
+                null
+            },
+            date = Date()
+        )
+        viewModelScope.launch {
+            dataDao.insertRow(dataEntity)
+        }
+    }
+}
+
+class AddScoreViewModelFactory(
+    private val application: Application
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(AddScoreViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return AddScoreViewModel(application) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
 }

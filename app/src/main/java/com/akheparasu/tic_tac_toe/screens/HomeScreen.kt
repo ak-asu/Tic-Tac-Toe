@@ -2,7 +2,6 @@ package com.akheparasu.tic_tac_toe.screens
 
 import android.bluetooth.BluetoothAdapter
 import android.content.Intent
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -52,7 +51,8 @@ fun HomeScreen() {
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val canShowDevicesDialog = permissions.values.all { it } && gameMode.value == GameMode.Online
+        val canShowDevicesDialog =
+            permissions.values.all { it } && gameMode.value == GameMode.TwoDevices
         if (canShowDevicesDialog) {
             if (!connectionService.isBtEnabled()) {
                 btEnableLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
@@ -66,7 +66,7 @@ fun HomeScreen() {
     }
 
     LaunchedEffect(gameMode.value) {
-        if (gameMode.value == GameMode.Online) {
+        if (gameMode.value == GameMode.TwoDevices) {
             val allPermissions = connectionService.getMissingPermissions()
             permissionLauncher.launch(allPermissions.first)
         }
@@ -126,7 +126,7 @@ fun HomeScreen() {
             )
         }
         if (showDevicesDialog.value) {
-            DevicesDialog(onDismiss = { showDevicesDialog.value = false } )
+            DevicesDialog(onDismiss = { showDevicesDialog.value = false })
         }
         RoundedRectButton(onClick = {
             gameMode.value = GameMode.Computer
@@ -136,22 +136,22 @@ fun HomeScreen() {
                 navController?.navigate(getGamePath(gameMode.value!!, playerPrefFlow.value))
                 gameMode.value = null
             }
-        }, text = "Play against Computer")
+        }, text = "Play against ${GameMode.Computer.getDisplayText()}")
         Spacer(modifier = Modifier.height(16.dp))
         RoundedRectButton(onClick = {
-            gameMode.value = GameMode.Human
+            gameMode.value = GameMode.OneDevice
             if (playerPrefFlow.value == Preference.AskEveryTime) {
                 showPrefDialog.value = true
             } else {
                 navController?.navigate(getGamePath(gameMode.value!!, playerPrefFlow.value))
                 gameMode.value = null
             }
-        }, text = "Play against Player")
+        }, text = "Play on ${GameMode.OneDevice.getDisplayText()}")
         Spacer(modifier = Modifier.height(16.dp))
         RoundedRectButton(onClick = {
-            gameMode.value = GameMode.Online
+            gameMode.value = GameMode.TwoDevices
             showPrefDialog.value = false
-        }, text = "Play Online")
+        }, text = "Play on ${GameMode.TwoDevices.getDisplayText()}")
         Spacer(modifier = Modifier.height(16.dp))
         RoundedRectButton(onClick = {
             navController?.navigate("career")

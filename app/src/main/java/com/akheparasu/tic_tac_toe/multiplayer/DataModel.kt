@@ -7,7 +7,7 @@ data class DataModel(
 )
 
 data class GameState(
-    val board: List<List<String>> = List(3) { List(3) {" "} },
+    val board: List<List<String>> = List(3) { List(3) { " " } },
     val turn: String = "0",
     val winner: String = "",
     val draw: Boolean = false,

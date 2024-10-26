@@ -108,7 +108,9 @@ fun DifficultySelector() {
                     containerColor = if (selectedDifficulty == difficulty) selectedDifficulty.getColor() else Color.Gray,
                 ),
                 contentPadding = PaddingValues(2.dp),
-                modifier = Modifier.weight(1f).padding(4.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(4.dp),
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(text = difficulty.name)
