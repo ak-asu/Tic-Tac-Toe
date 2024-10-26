@@ -53,7 +53,6 @@ import com.akheparasu.tic_tac_toe.storage.DataEntity
 import com.akheparasu.tic_tac_toe.storage.StorageDB
 import com.akheparasu.tic_tac_toe.ui.RoundedRectButton
 import com.akheparasu.tic_tac_toe.utils.Difficulty
-import com.akheparasu.tic_tac_toe.utils.FunctionParcel
 import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.GameResult
 import com.akheparasu.tic_tac_toe.utils.GridEntry
@@ -142,25 +141,7 @@ fun GameScreen(
                 )
             )
         }
-        navController?.currentBackStackEntry?.arguments?.putParcelable(
-            "onReplayKey",
-            FunctionParcel {
-                if (gameMode == GameMode.TwoDevices) {
-                    connectionService.receivedDataModel =
-                        connectionService.receivedDataModel.copy(
-                            gameState = GameState()
-                        )
-                    connectionService.setOnlineSetupStage(
-                        OnlineSetupStage.GameStart
-                    )
-                    connectionService.connectDevice(
-                        originalConnectedDevice!!
-                    )
-                }
-                navController.navigate("game/${gameMode.name}/${preference}/${originalConnectedDevice?.address}")
-            }
-        )
-        navController?.navigate("score/${gameMode.name}/${difficultyFlow.value}/${it.name}") {
+        navController?.navigate("score/${gameMode.name}/${preference.name}/${originalConnectedDevice?.address}/${difficultyFlow.value}/${it.name}") {
             popUpTo("home") { inclusive = false }
         }
     }
@@ -321,7 +302,8 @@ fun GameScreen(
                 MatchLineOverlay(
                     startCell = 0,
                     endCell = 0,
-                    cellSize = min(100.dp, maxCellSize.dp)
+                    cellSize = min(100.dp, maxCellSize.dp),
+                    onGoToScoreScreen = {}
                 )
             }
 
@@ -399,8 +381,10 @@ fun checkWinner(grid: Array<Array<GridEntry>>): GridEntry? {
 fun MatchLineOverlay(
     startCell: Int,
     endCell: Int,
-    cellSize: Dp
+    cellSize: Dp,
+    onGoToScoreScreen: () -> Unit
 ) {
+    val delayMS = 1000
     val calculateCellOffset: @Composable (Int) -> Offset = {
         with(LocalDensity.current) {
             val row = it / 3
@@ -414,8 +398,13 @@ fun MatchLineOverlay(
     val endOffset = calculateCellOffset(endCell)
     val animationProgress by animateFloatAsState(
         targetValue = 1f,
-        animationSpec = tween(durationMillis = 1000), label = ""
+        animationSpec = tween(durationMillis = delayMS), label = ""
     )
+
+    LaunchedEffect(Unit) {
+        delay(delayMS.toLong())
+        onGoToScoreScreen()
+    }
 
     Canvas(modifier = Modifier.requiredSizeIn(cellSize * 3)) {
         val animatedEndX = startOffset.x + (endOffset.x - startOffset.x) * animationProgress

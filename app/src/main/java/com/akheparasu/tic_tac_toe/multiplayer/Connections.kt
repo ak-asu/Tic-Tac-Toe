@@ -21,6 +21,7 @@ import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -427,6 +428,7 @@ class Connections(private val context: Context) {
         }
 
         suspend fun connect() {
+            delay(1000)
             if (clientSocket?.isConnected == false) {
                 try {
                     clientSocket.connect()
@@ -438,7 +440,6 @@ class Connections(private val context: Context) {
         }
 
         fun cancel() {
-            Log.e("yoyo", "hello")
             receivedDataModel = DataModel()
             handler.removeCallbacks(runnable)
             clientSocket?.close()

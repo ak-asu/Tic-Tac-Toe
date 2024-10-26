@@ -32,7 +32,6 @@ import com.akheparasu.tic_tac_toe.settings.SettingsDataStore
 import com.akheparasu.tic_tac_toe.ui.AppBar
 import com.akheparasu.tic_tac_toe.ui.theme.TicTacToeTheme
 import com.akheparasu.tic_tac_toe.utils.Difficulty
-import com.akheparasu.tic_tac_toe.utils.FunctionParcel
 import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.GameResult
 import com.akheparasu.tic_tac_toe.utils.LocalAudioPlayer
@@ -135,22 +134,34 @@ class MainActivity : ComponentActivity() {
                                     ).show()
                                 }
                             }
-                            composable("score/{gameModeName}/{difficulty}/{gameResult}/{gamePath}") { backStackEntry ->
+                            composable("score/{gameModeName}/{preference}/{deviceAddress}/{difficulty}/{gameResult}") { backStackEntry ->
                                 val gameModeName =
                                     backStackEntry.arguments?.getString("gameModeName")
+                                val preference = Preference.valueOf(
+                                    backStackEntry.arguments?.getString("preference")
+                                        ?: Preference.First.name
+                                )
+                                val originalConnectedDeviceAddress =
+                                    backStackEntry.arguments?.getString("deviceAddress")
                                 val difficulty = backStackEntry.arguments?.getString("difficulty")
                                     ?.let { runCatching { Difficulty.valueOf(it) }.getOrNull() }
                                 val gameResult = GameResult.valueOf(
                                     backStackEntry.arguments?.getString("gameResult")
                                         ?: GameResult.Draw.name
                                 )
-                                val onReplay =
-                                    backStackEntry.arguments?.getParcelable<FunctionParcel>("onReplayKey")?.function
                                 val context = LocalContext.current
                                 if (GameMode.entries.map { mode -> mode.name }
-                                        .contains(gameModeName) && onReplay != null) {
+                                        .contains(gameModeName)) {
                                     val gameMode = GameMode.valueOf(gameModeName!!)
-                                    ScoreScreen(gameMode, difficulty, gameResult, onReplay)
+                                    ScoreScreen(
+                                        gameMode,
+                                        preference,
+                                        difficulty,
+                                        gameResult,
+                                        connectionService.getBtDeviceFromAddress(
+                                            originalConnectedDeviceAddress
+                                        )
+                                    )
                                 } else {
                                     navController.popBackStack()
                                     Toast.makeText(
