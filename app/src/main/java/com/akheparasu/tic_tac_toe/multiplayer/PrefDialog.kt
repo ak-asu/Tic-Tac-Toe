@@ -95,7 +95,7 @@ fun PrefDialog() {
                         onClick = { prefClickAction(Preference.Second) },
                         text = "Opponent"
                     )
-                } else if (connectionService.receivedDataModel.metaData.choices.isNotEmpty() &&
+                } else if (connectionService.receivedDataModel.metaData.miniGame.player1Choice.isEmpty() &&
                     onlineSetupStage.value == OnlineSetupStage.Initialised
                 ) {
                     RoundedRectButton(

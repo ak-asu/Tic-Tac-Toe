@@ -1,11 +1,7 @@
 package com.akheparasu.tic_tac_toe.screens
 
 import android.app.Application
-import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -19,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSizeIn
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -163,7 +158,6 @@ fun GameScreen(
             }
         }
     }
-    var gamePaused by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(playerTurn) {
         if (!playerTurn && gameMode != GameMode.OneDevice) {
@@ -192,24 +186,10 @@ fun GameScreen(
             null -> {}
         }
     }
-    val btEnableLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { _ ->
-        if (connectionService.isBtEnabled()) {
-            connectionService.connectDevice(originalConnectedDevice!!)
-        }
-    }
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        if (permissions.values.all { it } && gameMode == GameMode.TwoDevices) {
-            btEnableLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
-        }
-    }
     if (gameMode == GameMode.TwoDevices) {
         LaunchedEffect(connectedDevice) {
             if (connectedDevice?.value?.address != originalConnectedDevice!!.address) {
-                gamePaused = true
+                navController?.popBackStack()
             }
         }
         LaunchedEffect(onlineSetupStage) {
@@ -231,89 +211,80 @@ fun GameScreen(
     val screenHeight = configuration.screenHeightDp.dp
     val maxCellSize = 0.9f * minOf(screenWidth.value, screenHeight.value) / 3
 
-    if (gamePaused) {
-        Text("Game paused")
-        if (gameMode == GameMode.TwoDevices) {
-            Button(onClick = {
-                permissionLauncher.launch(connectionService.getMissingPermissions().first)
-            }) { Text("Reconnect") }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Row {
+            Text(
+                text = "Player: ${playerMarker.name}", fontWeight = if (playerTurn) {
+                    FontWeight.Bold
+                } else {
+                    FontWeight.Thin
+                }
+            )
+            Text(text = " | ")
+            Text(
+                text = "Opponent: ${opponentMarker.name}", fontWeight = if (playerTurn) {
+                    FontWeight.Thin
+                } else {
+                    FontWeight.Bold
+                }
+            )
         }
-    } else {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Row {
-                Text(
-                    text = "Player: ${playerMarker.name}", fontWeight = if (playerTurn) {
-                        FontWeight.Bold
-                    } else {
-                        FontWeight.Thin
-                    }
-                )
-                Text(text = " | ")
-                Text(
-                    text = "Opponent: ${opponentMarker.name}", fontWeight = if (playerTurn) {
-                        FontWeight.Thin
-                    } else {
-                        FontWeight.Bold
-                    }
-                )
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-            for (i in 0 until 3) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    for (j in 0 until 3) {
-                        GridCell(
-                            value = grid[i][j].getDisplayText(),
-                            maxCellSize = maxCellSize
-                        ) {
-                            if (grid[i][j] == GridEntry.E) {
-                                if (playerTurn) {
-                                    grid[i][j] = playerMarker
-                                    playerTurn = false
-                                    if (checkWinner(grid)?.equals(playerMarker) == true) {
-                                        onGoToScoreScreen(GameResult.Win)
-                                    } else {
-                                        audioController.onPlayerTap()
-                                    }
+        for (i in 0 until 3) {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                for (j in 0 until 3) {
+                    GridCell(
+                        value = grid[i][j].getDisplayText(),
+                        maxCellSize = maxCellSize
+                    ) {
+                        if (grid[i][j] == GridEntry.E) {
+                            if (playerTurn) {
+                                grid[i][j] = playerMarker
+                                playerTurn = false
+                                if (checkWinner(grid)?.equals(playerMarker) == true) {
+                                    onGoToScoreScreen(GameResult.Win)
                                 } else {
-                                    if (gameMode == GameMode.OneDevice) {
-                                        grid[i][j] = opponentMarker
-                                        playerTurn = true
-                                        audioController.onOpponentTap()
-                                    }
+                                    audioController.onPlayerTap()
+                                }
+                            } else {
+                                if (gameMode == GameMode.OneDevice) {
+                                    grid[i][j] = opponentMarker
+                                    playerTurn = true
+                                    audioController.onOpponentTap()
                                 }
                             }
                         }
                     }
                 }
             }
-
-            if (false) {
-                MatchLineOverlay(
-                    startCell = 0,
-                    endCell = 0,
-                    cellSize = min(100.dp, maxCellSize.dp),
-                    onGoToScoreScreen = {}
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            RoundedRectButton(onClick = {
-                grid = Array(3) { Array(3) { GridEntry.E } }
-                playerTurn = preference == Preference.First
-            }, text = "Reset Game")
         }
+
+        if (false) {
+            MatchLineOverlay(
+                startCell = 0,
+                endCell = 0,
+                cellSize = min(100.dp, maxCellSize.dp),
+                onGoToScoreScreen = {}
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RoundedRectButton(onClick = {
+            grid = Array(3) { Array(3) { GridEntry.E } }
+            playerTurn = preference == Preference.First
+        }, text = "Reset Game")
     }
 }
 

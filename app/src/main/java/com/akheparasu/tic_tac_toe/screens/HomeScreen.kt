@@ -43,6 +43,7 @@ fun HomeScreen() {
     val btEnableLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { _ ->
+        connectionService.getMissingPermissions()
         if (connectionService.isBtEnabled()) {
             showDevicesDialog.value = true
         }
@@ -54,12 +55,7 @@ fun HomeScreen() {
         val canShowDevicesDialog =
             permissions.values.all { it } && gameMode.value == GameMode.TwoDevices
         if (canShowDevicesDialog) {
-            if (!connectionService.isBtEnabled()) {
-                btEnableLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
-            } else {
-                showDevicesDialog.value = true
-                gameMode.value = null
-            }
+            btEnableLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
         } else {
             gameMode.value = null
         }
@@ -67,8 +63,7 @@ fun HomeScreen() {
 
     LaunchedEffect(gameMode.value) {
         if (gameMode.value == GameMode.TwoDevices) {
-            val allPermissions = connectionService.getMissingPermissions()
-            permissionLauncher.launch(allPermissions.first)
+            permissionLauncher.launch(connectionService.getMissingPermissions().first)
         }
     }
     LaunchedEffect(onlineSetupStage.value) {

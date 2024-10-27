@@ -1,9 +1,11 @@
 package com.akheparasu.tic_tac_toe.multiplayer
 
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.content.Intent
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -24,6 +26,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
+import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
 
@@ -42,12 +46,21 @@ fun DevicesDialog(onDismiss: () -> Unit) {
     val connectionService = LocalConnectionService.current
     val devices = connectionService.devices.collectAsState()
     val onlineSetupStage = connectionService.onlineSetupStage.collectAsState()
-    val isLocEnabled by rememberSaveable { connectionService.isLocEnabled }
+    val isLocEnabled = connectionService.isLocEnabled
     val locEnableLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { _ ->
+        connectionService.getMissingPermissions()
         if (connectionService.isLocEnabled.value && connectionService.isBtEnabled()) {
+            connectionService.registerLocReceiver()
             connectionService.startDiscovery()
+        }
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions.values.all { it }) {
+            locEnableLauncher.launch(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
         }
     }
 
@@ -92,9 +105,9 @@ fun DevicesDialog(onDismiss: () -> Unit) {
                 val pairedDevices =
                     devices.value.filter { it.bondState == BluetoothDevice.BOND_BONDED }
                 Text("Available New Devices:")
-                if (!isLocEnabled) {
+                if (!isLocEnabled.value) {
                     Button(onClick = {
-                        locEnableLauncher.launch(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                        permissionLauncher.launch(connectionService.getMissingPermissions().second)
                     }) { Text("Turn On Location") }
                 } else {
                     LazyColumn(

@@ -16,7 +16,10 @@ data class GameState(
 )
 
 data class MetaData(
-    val choices: List<PlayerChoice> = emptyList(),
+    val choices: List<PlayerChoice> = listOf(
+        PlayerChoice("player1", ""),
+        PlayerChoice("player2", "")
+    ),
     val miniGame: MiniGame = MiniGame()
 )
 
