@@ -1,6 +1,5 @@
 package com.akheparasu.tic_tac_toe.algorithms
 
-import android.util.Log
 import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.GridEntry
 import kotlin.random.Random
@@ -51,10 +50,10 @@ fun runAITurn(
             val outputI = gridCheckI[randEasy]
             val outputJ = gridCheckJ[randEasy]
             grid[outputI][outputJ] = GridEntry.O
-            Log.i("medRoll", "rolled Easy mode")    // testing only
+            //Log.i("medRoll", "rolled Easy mode")    // testing only
             return grid
         } else {   // else runs hard code
-            Log.i("medRoll", "rolled Hard mode")    // testing only
+            //Log.i("medRoll", "rolled Hard mode")    // testing only
         }
     }
     if (diff == Difficulty.Hard || randMed) {
@@ -77,7 +76,7 @@ fun runAITurn(
             }
         }
         grid[outputI][outputJ] = GridEntry.O    // set move and return
-        Log.i("hardDiff", "is Hard mode") // testing only
+        //Log.i("hardDiff", "is Hard mode") // testing only
     }
     return grid
 }

@@ -31,6 +31,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.akheparasu.tic_tac_toe.storage.DataEntity
 import com.akheparasu.tic_tac_toe.storage.StorageDB
+import com.akheparasu.tic_tac_toe.utils.PADDING_HEIGHT
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -49,7 +50,7 @@ fun CareerScreen(careerViewModel: CareerViewModel) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(PADDING_HEIGHT.dp)
             .border(BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface)),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp)

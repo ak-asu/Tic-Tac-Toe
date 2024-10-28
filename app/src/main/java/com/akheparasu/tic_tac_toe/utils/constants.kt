@@ -6,6 +6,7 @@ import com.google.gson.annotations.SerializedName
 
 const val DEFAULT_VOLUME = 1.0f
 const val SPACER_HEIGHT = 16
+const val PADDING_HEIGHT = 16
 
 
 enum class Difficulty(private val level: Int) {
@@ -107,8 +108,10 @@ enum class GridEntry {
 enum class GameResult {
     @SerializedName("Win")
     Win,
+
     @SerializedName("Fail")
     Fail,
+
     @SerializedName("Draw")
     Draw;
 
@@ -139,6 +142,7 @@ data class GameResultData(
             return Gson().fromJson(json, GameResultData::class.java)
         }
     }
+
     fun toJson(): String {
         return Gson().toJson(this)
     }

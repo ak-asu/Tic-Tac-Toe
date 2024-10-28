@@ -1,7 +1,10 @@
 package com.akheparasu.tic_tac_toe.screens
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.bluetooth.BluetoothDevice
+import android.content.pm.ActivityInfo
+import androidx.activity.ComponentActivity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -33,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,13 +60,16 @@ import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
 import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
+import com.akheparasu.tic_tac_toe.utils.PADDING_HEIGHT
 import com.akheparasu.tic_tac_toe.utils.Preference
+import com.akheparasu.tic_tac_toe.utils.SPACER_HEIGHT
 import com.akheparasu.tic_tac_toe.utils.Winner
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Date
 
+@SuppressLint("SourceLockedOrientationActivity")
 @Composable
 fun GameScreen(
     gameMode: GameMode,
@@ -70,6 +77,10 @@ fun GameScreen(
     originalConnectedDevice: BluetoothDevice?,
     addScoreViewModel: AddScoreViewModel
 ) {
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
+    val screenHeight = configuration.screenHeightDp.dp
+    val maxCellSize = 0.9f * minOf(screenWidth.value, screenHeight.value) / 3
     val playerMarker = if (preference == Preference.First) {
         GridEntry.X
     } else {
@@ -80,6 +91,7 @@ fun GameScreen(
     } else {
         GridEntry.X
     }
+    val context = LocalContext.current
     val settings = LocalSettings.current
     val navController = LocalNavController.current
     val audioController = LocalAudioPlayer.current
@@ -96,6 +108,7 @@ fun GameScreen(
     )
     var grid by rememberSaveable(saver = gridSaver) { mutableStateOf(Array(3) { Array(3) { GridEntry.E } }) }
     var playerTurn by rememberSaveable { mutableStateOf(preference == Preference.First) }
+    var resetGame by rememberSaveable { mutableStateOf(false) }
     val gameResultDataSaver = Saver(
         save = { gameResultData: MutableState<GameResultData?> ->
             gameResultData.value?.toJson()
@@ -191,6 +204,8 @@ fun GameScreen(
             connectionService.sendData(
                 connectionService.receivedDataModel.copy(
                     gameState = GameState(
+                        board = grid.map { f -> f.map { e -> e.name } },
+                        turn = "${connectionService.receivedDataModel.gameState.turn.toInt() + 1}",
                         winner = when (it.gameResult) {
                             GameResult.Win -> currentDeviceAddress
                             GameResult.Fail -> originalConnectedDevice.address
@@ -220,8 +235,7 @@ fun GameScreen(
                     connectionService.receivedDataModel.copy(
                         gameState = GameState(
                             board = grid.map { it.map { e -> e.name } },
-                            turn = "${connectionService.receivedDataModel.gameState.turn.toInt() + 1}",
-                            connectionEstablished = true
+                            turn = "${connectionService.receivedDataModel.gameState.turn.toInt() + 1}"
                         )
                     )
                 )
@@ -230,52 +244,61 @@ fun GameScreen(
         gameResultData = checkWinner()
     }
     if (gameMode == GameMode.TwoDevices) {
-        LaunchedEffect(connectedDevice) {
+        LaunchedEffect(connectedDevice?.value) {
             if (connectedDevice?.value?.address != originalConnectedDevice!!.address) {
+                connectionService.setOnlineSetupStage(OnlineSetupStage.Idle)
+            }
+        }
+        LaunchedEffect(onlineSetupStage?.value) {
+            if (onlineSetupStage?.value != OnlineSetupStage.GameStart) {
                 navController?.popBackStack()
             }
         }
-        LaunchedEffect(onlineSetupStage) {
-            if (onlineSetupStage?.value == OnlineSetupStage.Idle) {
-                navController?.popBackStack()
+        LaunchedEffect(resetGame) {
+            if (resetGame) {
+                connectionService.sendData(
+                    connectionService.receivedDataModel.copy(gameState = GameState(reset = true))
+                )
+                grid = Array(3) { Array(3) { GridEntry.E } }
+                playerTurn = preference == Preference.First
+                resetGame = false
             }
         }
     }
     DisposableEffect(Unit) {
+        val activity = context as? ComponentActivity
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         audioController.onGameStart()
         if (gameMode == GameMode.TwoDevices) {
             connectionService.setOnDataReceived { dataModel ->
-                connectionService.receivedDataModel = dataModel
+                resetGame = connectionService.receivedDataModel.gameState.reset
                 grid = dataModel.gameState.board.map { r ->
                     r.map { GridEntry.valueOf(it) }.toTypedArray()
                 }
                     .toTypedArray()
-                if (!(dataModel.gameState.winner != "" || dataModel.gameState.draw)) {
-                    gameResultData = checkWinner()
+                gameResultData = checkWinner()
+                if (!(dataModel.gameState.winner.isNotEmpty() || dataModel.gameState.draw)) {
                     playerTurn = if (preference == Preference.First) {
                         dataModel.gameState.turn.toInt() % 2 == 0
                     } else {
                         dataModel.gameState.turn.toInt() % 2 == 1
                     }
+                } else {
+                    // Can check winner/draw, but no need as already done before
                 }
             }
         }
         onDispose {
-            connectionService.setOnDataReceived()
-            connectionService.disconnectDevice()
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             connectionService.setOnDataReceived(null)
+            connectionService.disconnectDevice()
         }
     }
-
-    val configuration = LocalConfiguration.current
-    val screenWidth = configuration.screenWidthDp.dp
-    val screenHeight = configuration.screenHeightDp.dp
-    val maxCellSize = 0.9f * minOf(screenWidth.value, screenHeight.value) / 3
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(PADDING_HEIGHT.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -296,7 +319,7 @@ fun GameScreen(
                 }
             )
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(SPACER_HEIGHT.dp))
         Box(
             modifier = Modifier.size(maxCellSize.dp * 3),
             contentAlignment = Alignment.Center
@@ -341,11 +364,10 @@ fun GameScreen(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(SPACER_HEIGHT.dp))
         RoundedRectButton(onClick = {
             if (gameResultData == null) {
-                grid = Array(3) { Array(3) { GridEntry.E } }
-                playerTurn = preference == Preference.First
+                resetGame = true
             }
         }, text = "Reset Game")
     }
@@ -361,8 +383,7 @@ fun GridCell(value: String, maxCellSize: Float, onTap: () -> Unit) {
                 maxWidth = maxCellSize.dp,
                 maxHeight = maxCellSize.dp
             )
-            .padding(8.dp)
-            //.indication(interactionSource, LocalIndication.current),
+            .padding((PADDING_HEIGHT / 2).dp)
             .clickable { onTap() },
         contentAlignment = Alignment.Center
     ) {

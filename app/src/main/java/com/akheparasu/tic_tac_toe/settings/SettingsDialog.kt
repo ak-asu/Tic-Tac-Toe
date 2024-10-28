@@ -49,6 +49,7 @@ import com.akheparasu.tic_tac_toe.utils.DEFAULT_VOLUME
 import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.LocalAudioPlayer
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
+import com.akheparasu.tic_tac_toe.utils.PADDING_HEIGHT
 import com.akheparasu.tic_tac_toe.utils.Preference
 import kotlinx.coroutines.launch
 
@@ -93,7 +94,7 @@ fun DifficultySelector() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding((PADDING_HEIGHT / 2).dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         Difficulty.entries.forEach { difficulty ->
@@ -144,7 +145,7 @@ fun VolumeSlider() {
         },
         valueRange = 0f..DEFAULT_VOLUME,
         steps = 10,
-        modifier = Modifier.padding(horizontal = 16.dp)
+        modifier = Modifier.padding(horizontal = PADDING_HEIGHT.dp)
     )
 }
 
@@ -164,7 +165,7 @@ fun ThemeToggle() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(PADDING_HEIGHT.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -229,8 +230,14 @@ fun PlayerPrefMenu() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Player Preference", modifier = Modifier.padding(8.dp))
-                Text(text = selectedOption.name, modifier = Modifier.padding(8.dp))
+                Text(
+                    text = "Player Preference",
+                    modifier = Modifier.padding((PADDING_HEIGHT / 2).dp)
+                )
+                Text(
+                    text = selectedOption.name,
+                    modifier = Modifier.padding((PADDING_HEIGHT / 2).dp)
+                )
             }
         }
         DropdownMenu(

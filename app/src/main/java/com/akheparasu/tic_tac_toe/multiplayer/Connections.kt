@@ -13,7 +13,6 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
@@ -121,7 +120,9 @@ class Connections(private val context: Context) {
     fun startDiscovery(): Boolean {
         try {
             if (bluetoothAdapter?.isEnabled == true) {
-                _devices.value = bluetoothAdapter!!.bondedDevices.filter { it.name != null && it.address.isNotEmpty() }.toMutableList()
+                _devices.value =
+                    bluetoothAdapter!!.bondedDevices.filter { it.name != null && it.address.isNotEmpty() }
+                        .toMutableList()
                 if (bluetoothAdapter!!.isDiscovering) {
                     bluetoothAdapter!!.cancelDiscovery()
                 }
@@ -247,9 +248,13 @@ class Connections(private val context: Context) {
                         intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
                     device?.let {
                         if (it.address == connectedThread?.getDevice()?.address &&
-                            connectedThread?.isAlive != true
+                            connectedThread?.checkRunning() == false
                         ) {
-                            connectedThread?.start()
+                            try {
+                                connectedThread?.start()
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
                         }
                         _devices.value = _devices.value.map { d ->
                             if (device.address == d.address) {
@@ -424,6 +429,10 @@ class Connections(private val context: Context) {
             }
         }
 
+        fun checkRunning(): Boolean {
+            return isRunning
+        }
+
         fun getDevice(): BluetoothDevice {
             return device
         }
@@ -453,7 +462,7 @@ class Connections(private val context: Context) {
     fun setOnlineSetupStage(value: OnlineSetupStage) {
         _onlineSetupStage.value = value
         if ((value == OnlineSetupStage.Idle || value == OnlineSetupStage.NoService) &&
-            connectedThread?.isAlive == true
+            connectedThread?.checkRunning() == true
         ) {
             connectedThread?.cancel()
         }

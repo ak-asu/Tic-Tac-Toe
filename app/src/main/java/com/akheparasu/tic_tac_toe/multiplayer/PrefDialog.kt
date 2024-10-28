@@ -19,6 +19,7 @@ import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
 import com.akheparasu.tic_tac_toe.utils.Preference
+import com.akheparasu.tic_tac_toe.utils.SPACER_HEIGHT
 
 @SuppressLint("MissingPermission")
 @Composable
@@ -90,7 +91,7 @@ fun PrefDialog() {
                         onClick = { prefClickAction(Preference.First) },
                         text = "Me"
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(SPACER_HEIGHT.dp))
                     RoundedRectButton(
                         onClick = { prefClickAction(Preference.Second) },
                         text = "Opponent"
@@ -126,7 +127,7 @@ fun PrefDialog() {
                         text = "Play"
                     )
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(SPACER_HEIGHT.dp))
                 RoundedRectButton(onClick = {
                     connectionService.sendData(
                         DataModel(gameState = GameState(connectionEstablished = false))
