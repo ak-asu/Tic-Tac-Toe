@@ -10,11 +10,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun RoundedRectButton(onClick: () -> Unit, text: String) {
+fun RoundedRectButton(onClick: () -> Unit, text: String, enabled: Boolean = true) {
     Button(
         onClick = onClick,
         shape = RoundedCornerShape(4.dp),
-        modifier = Modifier.fillMaxWidth(0.8f).requiredWidthIn(max = 300.dp)
+        modifier = Modifier
+            .fillMaxWidth(0.8f)
+            .requiredWidthIn(max = 300.dp),
+        enabled = enabled
     ) {
         Text(text)
     }

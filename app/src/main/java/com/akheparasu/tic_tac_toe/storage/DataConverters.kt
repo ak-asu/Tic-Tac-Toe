@@ -3,7 +3,7 @@ package com.akheparasu.tic_tac_toe.storage
 import androidx.room.TypeConverter
 import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.GameMode
-import com.akheparasu.tic_tac_toe.utils.Player
+import com.akheparasu.tic_tac_toe.utils.Winner
 import java.util.Date
 
 class DateConverters {
@@ -34,13 +34,13 @@ class DifficultyConverters {
 class PlayerConverters {
 
     @TypeConverter
-    fun fromPlayer(player: Player): String {
+    fun fromPlayer(player: Winner): String {
         return player.name
     }
 
     @TypeConverter
-    fun toPlayer(player: String): Player {
-        return Player.valueOf(player)
+    fun toPlayer(player: String): Winner {
+        return Winner.valueOf(player)
     }
 }
 

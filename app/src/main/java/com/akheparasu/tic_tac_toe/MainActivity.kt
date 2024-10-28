@@ -1,7 +1,7 @@
 package com.akheparasu.tic_tac_toe
 
 import android.os.Bundle
-import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -10,13 +10,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.akheparasu.tic_tac_toe.audio.AudioPlayer
 import com.akheparasu.tic_tac_toe.multiplayer.Connections
+import com.akheparasu.tic_tac_toe.multiplayer.PrefDialog
+import com.akheparasu.tic_tac_toe.screens.AddScoreViewModel
+import com.akheparasu.tic_tac_toe.screens.AddScoreViewModelFactory
 import com.akheparasu.tic_tac_toe.screens.CareerScreen
 import com.akheparasu.tic_tac_toe.screens.CareerViewModel
 import com.akheparasu.tic_tac_toe.screens.CareerViewModelFactory
@@ -33,6 +38,7 @@ import com.akheparasu.tic_tac_toe.utils.LocalAudioPlayer
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
+import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
 import com.akheparasu.tic_tac_toe.utils.Preference
 
 
@@ -47,6 +53,9 @@ class MainActivity : ComponentActivity() {
         val careerViewModel: CareerViewModel by viewModels {
             CareerViewModelFactory(application)
         }
+        val addScoreViewModel: AddScoreViewModel by viewModels {
+            AddScoreViewModelFactory(application)
+        }
         connectionService = Connections(this)
         setContent {
             val navController: NavHostController = rememberNavController()
@@ -56,11 +65,17 @@ class MainActivity : ComponentActivity() {
                 LocalConnectionService provides connectionService,
                 LocalAudioPlayer provides audioPlayerContext,
             ) {
+                val onlineSetupStage = connectionService.onlineSetupStage.collectAsState()
                 TicTacToeTheme {
                     Scaffold(
                         topBar = { AppBar() },
                         modifier = Modifier.fillMaxSize()
                     ) { innerPadding ->
+                        if (onlineSetupStage.value == OnlineSetupStage.Preference ||
+                            onlineSetupStage.value == OnlineSetupStage.Initialised
+                        ) {
+                            PrefDialog()
+                        }
                         NavHost(
                             navController = navController,
                             startDestination = "home",
@@ -78,47 +93,82 @@ class MainActivity : ComponentActivity() {
                                 )
                                 val originalConnectedDeviceAddress =
                                     backStackEntry.arguments?.getString("deviceAddress")
-                                Log.e("yoyo", originalConnectedDeviceAddress?:"")
+                                val context = LocalContext.current
                                 if (GameMode.entries.map { mode -> mode.name }
                                         .contains(gameModeName)) {
                                     val gameMode = GameMode.valueOf(gameModeName!!)
-                                    if (gameMode == GameMode.Online) {
-                                        if (originalConnectedDeviceAddress != null) {
-                                            audioPlayerContext.onGameStart()
+                                    if (gameMode == GameMode.TwoDevices) {
+                                        val originalConnectedDevice =
+                                            connectionService.getBtDeviceFromAddress(
+                                                originalConnectedDeviceAddress
+                                            )
+                                        if (originalConnectedDevice != null) {
                                             GameScreen(
                                                 gameMode,
                                                 preference,
-                                                originalConnectedDeviceAddress
+                                                originalConnectedDevice,
+                                                addScoreViewModel
                                             )
+                                        } else {
+                                            navController.popBackStack()
+                                            Toast.makeText(
+                                                context,
+                                                "Connection error",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                     } else {
-                                        audioPlayerContext.onGameStart()
                                         GameScreen(
                                             gameMode,
                                             preference,
-                                            originalConnectedDeviceAddress
+                                            null,
+                                            addScoreViewModel
                                         )
                                     }
+                                } else {
+                                    navController.popBackStack()
+                                    Toast.makeText(
+                                        context,
+                                        "Game selection error",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                             }
-                            composable("score/{gameModeName}/{difficulty}/{gameResult}") { backStackEntry ->
+                            composable("score/{gameModeName}/{preference}/{deviceAddress}/{difficulty}/{gameResult}") { backStackEntry ->
                                 val gameModeName =
                                     backStackEntry.arguments?.getString("gameModeName")
+                                val preference = Preference.valueOf(
+                                    backStackEntry.arguments?.getString("preference")
+                                        ?: Preference.First.name
+                                )
+                                val originalConnectedDeviceAddress =
+                                    backStackEntry.arguments?.getString("deviceAddress")
                                 val difficulty = backStackEntry.arguments?.getString("difficulty")
                                     ?.let { runCatching { Difficulty.valueOf(it) }.getOrNull() }
                                 val gameResult = GameResult.valueOf(
                                     backStackEntry.arguments?.getString("gameResult")
                                         ?: GameResult.Draw.name
                                 )
+                                val context = LocalContext.current
                                 if (GameMode.entries.map { mode -> mode.name }
                                         .contains(gameModeName)) {
                                     val gameMode = GameMode.valueOf(gameModeName!!)
-                                    when (gameResult) {
-                                        GameResult.Win -> audioPlayerContext.onWin()
-                                        GameResult.Fail -> audioPlayerContext.onFail()
-                                        GameResult.Draw -> audioPlayerContext.onDraw()
-                                    }
-                                    ScoreScreen(gameMode, difficulty, gameResult)
+                                    ScoreScreen(
+                                        gameMode,
+                                        preference,
+                                        difficulty,
+                                        gameResult,
+                                        connectionService.getBtDeviceFromAddress(
+                                            originalConnectedDeviceAddress
+                                        )
+                                    )
+                                } else {
+                                    navController.popBackStack()
+                                    Toast.makeText(
+                                        context,
+                                        "Score screen error",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                             }
                             composable("career") { CareerScreen(careerViewModel) }
@@ -129,8 +179,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (connectionService.getMissingPermissions().first.isNotEmpty()
+            || !connectionService.isBtEnabled()
+        ) {
+            connectionService.setOnlineSetupStage(OnlineSetupStage.NoService)
+        }
+    }
+
     override fun onStop() {
         super.onStop()
-        connectionService.dispose()
+        connectionService.unregisterReceiver()
     }
 }

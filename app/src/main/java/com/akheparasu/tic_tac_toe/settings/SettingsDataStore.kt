@@ -24,7 +24,6 @@ class SettingsDataStore(private val context: Context) {
         val DARK_THEME = booleanPreferencesKey("darkTheme")
         val VOLUME = floatPreferencesKey("volume")
         val PLAYER_PREF = intPreferencesKey("playerPref")
-        val ONLINE_PREF = intPreferencesKey("onlinePref")
     }
 
     val difficultyFlow: Flow<Difficulty> = context.dataStore.data
@@ -53,14 +52,6 @@ class SettingsDataStore(private val context: Context) {
             Preference.fromId(id)
         }
 
-    val onlinePrefFlow: Flow<Preference> = context.dataStore.data
-        .map { preferences ->
-            val id =
-                preferences[PreferencesKeys.ONLINE_PREF]
-                    ?: Preference.AskEveryTime.getPreferenceId()
-            Preference.fromId(id)
-        }
-
     suspend fun saveDifficulty(difficulty: Difficulty) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.DIFFICULTY] = difficulty.getDifficultyLevel()
@@ -82,12 +73,6 @@ class SettingsDataStore(private val context: Context) {
     suspend fun savePlayerPref(playerPref: Preference) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.PLAYER_PREF] = playerPref.getPreferenceId()
-        }
-    }
-
-    suspend fun saveOnlinePref(onlinePref: Preference) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.ONLINE_PREF] = onlinePref.getPreferenceId()
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.akheparasu.tic_tac_toe.screens
 
+import android.bluetooth.BluetoothAdapter
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -24,6 +26,7 @@ import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
+import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
 import com.akheparasu.tic_tac_toe.utils.Preference
 
 
@@ -32,20 +35,40 @@ fun HomeScreen() {
     val navController = LocalNavController.current
     val settings = LocalSettings.current
     val connectionService = LocalConnectionService.current
+    val onlineSetupStage = connectionService.onlineSetupStage.collectAsState()
     val showDevicesDialog = rememberSaveable { mutableStateOf(false) }
     val showPrefDialog = rememberSaveable { mutableStateOf(false) }
     val gameMode = rememberSaveable { mutableStateOf<GameMode?>(null) }
     val playerPrefFlow = settings.playerPrefFlow.collectAsState(initial = Preference.AskEveryTime)
+    val btEnableLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { _ ->
+        connectionService.getMissingPermissions()
+        if (connectionService.isBtEnabled()) {
+            showDevicesDialog.value = true
+        }
+        gameMode.value = null
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        showDevicesDialog.value = permissions.values.all { it } && gameMode.value == GameMode.Online
+        val canShowDevicesDialog =
+            permissions.values.all { it } && gameMode.value == GameMode.TwoDevices
+        if (canShowDevicesDialog) {
+            btEnableLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+        } else {
+            gameMode.value = null
+        }
     }
 
     LaunchedEffect(gameMode.value) {
-        if (gameMode.value == GameMode.Online) {
-            val allPermissions = connectionService.getMissingPermissions()
-            permissionLauncher.launch(allPermissions)
+        if (gameMode.value == GameMode.TwoDevices) {
+            permissionLauncher.launch(connectionService.getMissingPermissions().first)
+        }
+    }
+    LaunchedEffect(onlineSetupStage.value) {
+        if (onlineSetupStage.value == OnlineSetupStage.NoService) {
+            showDevicesDialog.value = false
         }
     }
 
@@ -98,16 +121,7 @@ fun HomeScreen() {
             )
         }
         if (showDevicesDialog.value) {
-            DevicesDialog(
-                onDismiss = {
-                    showDevicesDialog.value = false
-                    gameMode.value = null
-                },
-                onDeviceSelected = { device, pref ->
-                    navController?.navigate(getGamePath(GameMode.Online, pref, device.address))
-                    gameMode.value = null
-                }
-            )
+            DevicesDialog(onDismiss = { showDevicesDialog.value = false })
         }
         RoundedRectButton(onClick = {
             gameMode.value = GameMode.Computer
@@ -117,22 +131,22 @@ fun HomeScreen() {
                 navController?.navigate(getGamePath(gameMode.value!!, playerPrefFlow.value))
                 gameMode.value = null
             }
-        }, text = "Play against Computer")
+        }, text = "Play against ${GameMode.Computer.getDisplayText()}")
         Spacer(modifier = Modifier.height(16.dp))
         RoundedRectButton(onClick = {
-            gameMode.value = GameMode.Human
+            gameMode.value = GameMode.OneDevice
             if (playerPrefFlow.value == Preference.AskEveryTime) {
                 showPrefDialog.value = true
             } else {
                 navController?.navigate(getGamePath(gameMode.value!!, playerPrefFlow.value))
                 gameMode.value = null
             }
-        }, text = "Play against Player")
+        }, text = "Play on ${GameMode.OneDevice.getDisplayText()}")
         Spacer(modifier = Modifier.height(16.dp))
         RoundedRectButton(onClick = {
-            gameMode.value = GameMode.Online
+            gameMode.value = GameMode.TwoDevices
             showPrefDialog.value = false
-        }, text = "Play Online")
+        }, text = "Play on ${GameMode.TwoDevices.getDisplayText()}")
         Spacer(modifier = Modifier.height(16.dp))
         RoundedRectButton(onClick = {
             navController?.navigate("career")

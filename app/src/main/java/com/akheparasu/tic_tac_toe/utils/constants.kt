@@ -1,6 +1,8 @@
 package com.akheparasu.tic_tac_toe.utils
 
 import androidx.compose.ui.graphics.Color
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 
 const val DEFAULT_VOLUME = 1.0f
 const val SPACER_HEIGHT = 16
@@ -35,16 +37,34 @@ enum class Difficulty(private val level: Int) {
     }
 }
 
-enum class Player {
+enum class Winner {
     Human,
     Computer,
-    Challenger;
+    Empty,
+    Draw;
+
+    fun getDisplayText(): String {
+        return when (this) {
+            Human -> "Human"
+            Computer -> "Computer"
+            Empty -> "-"
+            Draw -> "Draw"
+        }
+    }
 }
 
 enum class GameMode {
     Computer,
-    Human,
-    Online;
+    OneDevice,
+    TwoDevices;
+
+    fun getDisplayText(): String {
+        return when (this) {
+            Computer -> "Computer"
+            OneDevice -> "1-Device"
+            TwoDevices -> "2-Devices"
+        }
+    }
 }
 
 enum class Preference(private val id: Int) {
@@ -85,8 +105,11 @@ enum class GridEntry {
 }
 
 enum class GameResult {
+    @SerializedName("Win")
     Win,
+    @SerializedName("Fail")
     Fail,
+    @SerializedName("Draw")
     Draw;
 
     fun getDisplayText(): String {
@@ -95,5 +118,28 @@ enum class GameResult {
             Fail -> "You Lost"
             Draw -> "Game Draw"
         }
+    }
+}
+
+enum class OnlineSetupStage {
+    Preference,
+    Initialised,
+    GameStart,
+    NoService,
+    Idle;
+}
+
+data class GameResultData(
+    val startCell: Int? = null,
+    val endCell: Int? = null,
+    val gameResult: GameResult
+) {
+    companion object {
+        fun fromJson(json: String): GameResultData {
+            return Gson().fromJson(json, GameResultData::class.java)
+        }
+    }
+    fun toJson(): String {
+        return Gson().toJson(this)
     }
 }
