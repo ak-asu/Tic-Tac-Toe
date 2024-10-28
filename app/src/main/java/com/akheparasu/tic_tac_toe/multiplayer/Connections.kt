@@ -13,6 +13,7 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
@@ -120,7 +121,7 @@ class Connections(private val context: Context) {
     fun startDiscovery(): Boolean {
         try {
             if (bluetoothAdapter?.isEnabled == true) {
-                _devices.value = bluetoothAdapter!!.bondedDevices.toMutableList()
+                _devices.value = bluetoothAdapter!!.bondedDevices.filter { it.name != null && it.address.isNotEmpty() }.toMutableList()
                 if (bluetoothAdapter!!.isDiscovering) {
                     bluetoothAdapter!!.cancelDiscovery()
                 }
@@ -198,7 +199,6 @@ class Connections(private val context: Context) {
                     false
                 }
             }
-
             withContext(Dispatchers.Main) {
                 if (isConnected != true) {
                     Toast.makeText(context, "Could not connect", Toast.LENGTH_SHORT).show()

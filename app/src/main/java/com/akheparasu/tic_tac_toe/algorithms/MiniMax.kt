@@ -5,7 +5,12 @@ import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.GridEntry
 import kotlin.random.Random
 
-fun runAITurn(grid: Array<Array<GridEntry>>, diff: Difficulty): Array<Array<GridEntry>> {
+fun runAITurn(
+    grid: Array<Array<GridEntry>>,
+    diff: Difficulty,
+    playerMarker: GridEntry,
+    opponentMarker: GridEntry
+): Array<Array<GridEntry>> {
     var randEasy = 0                    // var and val used
     val randMed = Random.nextBoolean()  // the 50 / 50 for easy or hard per turn
     val gridSize = grid.size
@@ -20,9 +25,9 @@ fun runAITurn(grid: Array<Array<GridEntry>>, diff: Difficulty): Array<Array<Grid
                 gridCheckI.add(i)
                 gridCheckJ.add(j)
             } else {
-                gridEmpty = gridEmpty + 1
+                gridEmpty += 1
             }
-            gridCount = gridCount + 1
+            gridCount += 1
         }
     }
 
@@ -50,7 +55,6 @@ fun runAITurn(grid: Array<Array<GridEntry>>, diff: Difficulty): Array<Array<Grid
             return grid
         } else {   // else runs hard code
             Log.i("medRoll", "rolled Hard mode")    // testing only
-
         }
     }
     if (diff == Difficulty.Hard || randMed) {
@@ -64,7 +68,6 @@ fun runAITurn(grid: Array<Array<GridEntry>>, diff: Difficulty): Array<Array<Grid
                     val score =
                         miniMax(grid, 1, 0, Int.MIN_VALUE, Int.MAX_VALUE) // call miniMax for player
                     grid[i][j] = GridEntry.E // undo the test move
-
                     if (score > bestScore) {    // find new best score and move
                         bestScore = score
                         outputI = i
@@ -73,16 +76,14 @@ fun runAITurn(grid: Array<Array<GridEntry>>, diff: Difficulty): Array<Array<Grid
                 }
             }
         }
-
         grid[outputI][outputJ] = GridEntry.O    // set move and return
         Log.i("hardDiff", "is Hard mode") // testing only
-
     }
     return grid
 }
 
 fun miniMax(grid: Array<Array<GridEntry>>, player: Int, depth: Int, alpha: Int, beta: Int): Int {
-    val winnerCheck = findWinnners(grid)    // winner = GridEntry.X, GridEntry.O, GridEntry.E
+    val winnerCheck = findWinners(grid)    // winner = GridEntry.X, GridEntry.O, GridEntry.E
     var gridFull = 0
     var bestScore: Int
     if (winnerCheck == GridEntry.X) {     // depth is used to find earliest win
@@ -94,7 +95,7 @@ fun miniMax(grid: Array<Array<GridEntry>>, player: Int, depth: Int, alpha: Int, 
     for (i in 0 until grid.size) {    // finds if grid is full and if so dont run
         for (j in 0 until grid.size) {
             if (grid[i][j] != GridEntry.E) {
-                gridFull = gridFull + 1
+                gridFull += 1
             }
         }
     }
@@ -140,7 +141,7 @@ fun miniMax(grid: Array<Array<GridEntry>>, player: Int, depth: Int, alpha: Int, 
     return bestScore
 }
 
-fun findWinnners(grid: Array<Array<GridEntry>>): GridEntry {
+fun findWinners(grid: Array<Array<GridEntry>>): GridEntry {
     val gridSize = grid.size
     // this works for 3x3 grid but might need to be updated, just checks all outcomes for winnin
     for (i in 0 until gridSize) {

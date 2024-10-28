@@ -55,14 +55,10 @@ fun ScoreScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(text = "Score Screen")
-        Spacer(modifier = Modifier.height(16.dp))
         Text(text = "Mode: ${gameMode.name}")
         Spacer(modifier = Modifier.height(16.dp))
-        if (difficulty != null) {
-            Text(text = "Difficulty: ${difficulty.name}")
-            Spacer(modifier = Modifier.height(16.dp))
-        }
+        Text(text = "Difficulty: ${difficulty?.name ?: gameMode.getDisplayText()}")
+        Spacer(modifier = Modifier.height(16.dp))
         Text(text = gameResult.getDisplayText())
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = {

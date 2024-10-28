@@ -1,6 +1,8 @@
 package com.akheparasu.tic_tac_toe.utils
 
 import androidx.compose.ui.graphics.Color
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 
 const val DEFAULT_VOLUME = 1.0f
 const val SPACER_HEIGHT = 16
@@ -103,8 +105,11 @@ enum class GridEntry {
 }
 
 enum class GameResult {
+    @SerializedName("Win")
     Win,
+    @SerializedName("Fail")
     Fail,
+    @SerializedName("Draw")
     Draw;
 
     fun getDisplayText(): String {
@@ -122,4 +127,19 @@ enum class OnlineSetupStage {
     GameStart,
     NoService,
     Idle;
+}
+
+data class GameResultData(
+    val startCell: Int? = null,
+    val endCell: Int? = null,
+    val gameResult: GameResult
+) {
+    companion object {
+        fun fromJson(json: String): GameResultData {
+            return Gson().fromJson(json, GameResultData::class.java)
+        }
+    }
+    fun toJson(): String {
+        return Gson().toJson(this)
+    }
 }
