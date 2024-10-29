@@ -18,6 +18,8 @@ import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
+import com.akheparasu.tic_tac_toe.utils.PLAYER_1
+import com.akheparasu.tic_tac_toe.utils.PLAYER_2
 import com.akheparasu.tic_tac_toe.utils.Preference
 import com.akheparasu.tic_tac_toe.utils.SPACER_HEIGHT
 
@@ -34,23 +36,35 @@ fun PrefDialog() {
         } else {
             connectionService.sendData(
                 DataModel(
-                    gameState = GameState(connectionEstablished = true),
                     metaData = MetaData(
                         choices = listOf(
                             PlayerChoice(
-                                id = "player1",
-                                name = ""
+                                id = PLAYER_1,
+                                name = if (connectionService.getPlayerId() == PLAYER_2) {
+                                    selectedDevice.value!!.address
+                                } else {
+                                    connectionService.receivedDataModel.metaData.choices.first().name
+                                }
                             ),
                             PlayerChoice(
-                                id = "player2",
-                                name = selectedDevice.value!!.address
+                                id = PLAYER_2,
+                                name = if (connectionService.getPlayerId() == PLAYER_1) {
+                                    selectedDevice.value!!.address
+                                } else {
+                                    connectionService.receivedDataModel.metaData.choices.last().name
+                                }
                             )
                         ),
                         miniGame = MiniGame(
-                            player1Choice = if (it == Preference.Second) {
+                            player1Choice = if (connectionService.getPlayerId() == PLAYER_1 && it == Preference.Second) {
                                 selectedDevice.value!!.address
                             } else {
-                                ""
+                                connectionService.receivedDataModel.metaData.miniGame.player1Choice
+                            },
+                            player2Choice = if (connectionService.getPlayerId() == PLAYER_2 && it == Preference.Second) {
+                                selectedDevice.value!!.address
+                            } else {
+                                connectionService.receivedDataModel.metaData.miniGame.player2Choice
                             }
                         )
                     )
@@ -72,8 +86,6 @@ fun PrefDialog() {
                         }
                     }/${selectedDevice.value?.address}"
                 )
-            } else if (onlineSetupStage.value != OnlineSetupStage.Initialised) {
-                connectionService.receivedDataModel = DataModel()
             }
         }
     }
@@ -96,27 +108,41 @@ fun PrefDialog() {
                         onClick = { prefClickAction(Preference.Second) },
                         text = "Opponent"
                     )
-                } else if (connectionService.receivedDataModel.metaData.miniGame.player1Choice.isEmpty() &&
+                } else if (
+                    ((connectionService.receivedDataModel.metaData.miniGame.player1Choice.isEmpty() &&
+                            connectionService.getPlayerId() == PLAYER_1) ||
+                            (connectionService.receivedDataModel.metaData.miniGame.player2Choice.isEmpty() &&
+                                    connectionService.getPlayerId() == PLAYER_2)) &&
                     onlineSetupStage.value == OnlineSetupStage.Initialised
                 ) {
                     RoundedRectButton(
                         onClick = {
                             connectionService.receivedDataModel = DataModel(
-                                gameState = GameState(connectionEstablished = true),
                                 metaData = MetaData(
                                     choices = listOf(
                                         PlayerChoice(
-                                            id = "player1",
-                                            name = selectedDevice.value!!.address
+                                            id = PLAYER_1,
+                                            name = if (connectionService.getPlayerId() == PLAYER_1) {
+                                                connectionService.receivedDataModel.metaData.choices.first().name
+                                            } else {
+                                                selectedDevice.value!!.address
+                                            }
                                         ),
-                                        connectionService.receivedDataModel.metaData.choices.last()
+                                        PlayerChoice(
+                                            id = PLAYER_2,
+                                            name = if (connectionService.getPlayerId() == PLAYER_2) {
+                                                connectionService.receivedDataModel.metaData.choices.last().name
+                                            } else {
+                                                selectedDevice.value!!.address
+                                            }
+                                        )
                                     ),
                                     miniGame = MiniGame(
                                         player1Choice = connectionService.receivedDataModel.metaData.miniGame.player1Choice.ifEmpty {
-                                            selectedDevice.value!!.address
+                                            connectionService.receivedDataModel.metaData.miniGame.player2Choice
                                         },
                                         player2Choice = connectionService.receivedDataModel.metaData.miniGame.player1Choice.ifEmpty {
-                                            selectedDevice.value!!.address
+                                            connectionService.receivedDataModel.metaData.miniGame.player2Choice
                                         }
                                     )
                                 )

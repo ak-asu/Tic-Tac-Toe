@@ -61,9 +61,7 @@ fun DevicesDialog(onDismiss: () -> Unit) {
     }
 
     LaunchedEffect(onlineSetupStage.value) {
-        if (!(onlineSetupStage.value == OnlineSetupStage.Idle ||
-                    onlineSetupStage.value == OnlineSetupStage.NoService)
-        ) {
+        if (onlineSetupStage.value != OnlineSetupStage.Idle) {
             onDismiss()
         }
     }
@@ -139,11 +137,12 @@ fun DevicesDialog(onDismiss: () -> Unit) {
 @Composable
 fun DeviceItem(device: BluetoothDevice) {
     val connectionService = LocalConnectionService.current
+    val isConnecting = connectionService.isConnecting.collectAsState()
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clickable {
+            .clickable (enabled = !isConnecting.value) {
                 connectionService.connectDevice(device)
             }
     ) {

@@ -7,7 +7,8 @@ import com.google.gson.annotations.SerializedName
 const val DEFAULT_VOLUME = 1.0f
 const val SPACER_HEIGHT = 16
 const val PADDING_HEIGHT = 16
-
+const val PLAYER_1 = "player1"
+const val PLAYER_2 = "player2"
 
 enum class Difficulty(private val level: Int) {
     Easy(0),

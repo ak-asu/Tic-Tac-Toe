@@ -1,10 +1,14 @@
 package com.akheparasu.tic_tac_toe
 
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -66,6 +70,14 @@ class MainActivity : ComponentActivity() {
                 LocalAudioPlayer provides audioPlayerContext,
             ) {
                 val onlineSetupStage = connectionService.onlineSetupStage.collectAsState()
+                val missingPermissions = connectionService.getMissingPermissions()
+                registerForActivityResult(
+                    ActivityResultContracts.RequestMultiplePermissions()
+                ) { permissions ->
+                    if (permissions.values.all { it }) {
+                        connectionService.getMissingPermissions()
+                    }
+                }.launch(missingPermissions.first + missingPermissions.second)
                 TicTacToeTheme {
                     Scaffold(
                         topBar = { AppBar() },

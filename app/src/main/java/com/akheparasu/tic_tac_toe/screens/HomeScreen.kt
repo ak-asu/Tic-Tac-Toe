@@ -123,7 +123,10 @@ fun HomeScreen() {
             )
         }
         if (showDevicesDialog.value) {
-            DevicesDialog(onDismiss = { showDevicesDialog.value = false })
+            DevicesDialog(onDismiss = {
+                connectionService.disconnectDevice()
+                showDevicesDialog.value = false
+            })
         }
         RoundedRectButton(onClick = {
             gameMode.value = GameMode.Computer

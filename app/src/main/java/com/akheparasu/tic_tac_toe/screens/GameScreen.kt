@@ -256,9 +256,12 @@ fun GameScreen(
         }
         LaunchedEffect(resetGame) {
             if (resetGame) {
-                connectionService.sendData(
-                    connectionService.receivedDataModel.copy(gameState = GameState(reset = true))
-                )
+                if (!connectionService.receivedDataModel.gameState.reset) {
+                    connectionService.sendData(
+                        connectionService.receivedDataModel.copy(gameState = GameState(reset = true))
+                    )
+                }
+                connectionService.receivedDataModel = connectionService.receivedDataModel.copy(gameState = GameState())
                 grid = Array(3) { Array(3) { GridEntry.E } }
                 playerTurn = preference == Preference.First
                 resetGame = false
@@ -271,17 +274,22 @@ fun GameScreen(
         audioController.onGameStart()
         if (gameMode == GameMode.TwoDevices) {
             connectionService.setOnDataReceived { dataModel ->
+                if (!dataModel.gameState.reset || dataModel.gameState.turn.toInt() < connectionService.receivedDataModel.gameState.turn.toInt()) {
+                    connectionService.sendData(connectionService.receivedDataModel)
+                } else {
+                    connectionService.receivedDataModel = dataModel
+                }
                 resetGame = connectionService.receivedDataModel.gameState.reset
-                grid = dataModel.gameState.board.map { r ->
+                grid = connectionService.receivedDataModel.gameState.board.map { r ->
                     r.map { GridEntry.valueOf(it) }.toTypedArray()
                 }
                     .toTypedArray()
                 gameResultData = checkWinner()
-                if (!(dataModel.gameState.winner.isNotEmpty() || dataModel.gameState.draw)) {
+                if (!(connectionService.receivedDataModel.gameState.winner.isNotEmpty() || connectionService.receivedDataModel.gameState.draw)) {
                     playerTurn = if (preference == Preference.First) {
-                        dataModel.gameState.turn.toInt() % 2 == 0
+                        connectionService.receivedDataModel.gameState.turn.toInt() % 2 == 0
                     } else {
-                        dataModel.gameState.turn.toInt() % 2 == 1
+                        connectionService.receivedDataModel.gameState.turn.toInt() % 2 == 1
                     }
                 } else {
                     // Can check winner/draw, but no need as already done before
