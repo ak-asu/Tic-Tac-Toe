@@ -38,8 +38,10 @@ fun runAITurn(
         randEasy = Random.nextInt((gridSize * gridSize) - gridEmpty)
         val outputI = gridCheckI[randEasy]  // takes the random value and uses it -
         val outputJ = gridCheckJ[randEasy]  // to find the given I and J found above
-        grid[outputI][outputJ] = GridEntry.O        // set move and return
-        //Log.i("randEasy:", randEasy.toString())           // testing only
+        grid[outputI][outputJ] = opponentMarker        // set move and return
+        //Log.i("randEasy:", randEasy.toString())                 // testing only
+        //Log.i("gridEmpty:", gridEmpty.toString())               // testing only
+        //Log.i("opponenetMarker:", opponentMarker.toString())    // testing only
         return grid
     }
     if (diff == Difficulty.Medium) {
@@ -50,11 +52,11 @@ fun runAITurn(
             randEasy = Random.nextInt((gridSize * gridSize) - gridEmpty)
             val outputI = gridCheckI[randEasy]
             val outputJ = gridCheckJ[randEasy]
-            grid[outputI][outputJ] = GridEntry.O
-            Log.i("medRoll", "rolled Easy mode")    // testing only
+            grid[outputI][outputJ] = opponentMarker
+            //Log.i("medRoll", "rolled Easy mode")    // testing only
             return grid
         } else {   // else runs hard code
-            Log.i("medRoll", "rolled Hard mode")    // testing only
+            //Log.i("medRoll", "rolled Hard mode")    // testing only
         }
     }
     if (diff == Difficulty.Hard || randMed) {
@@ -64,9 +66,9 @@ fun runAITurn(
         for (i in 0 until gridSize) {   // loop through every move and find best outcomes
             for (j in 0 until gridSize) {
                 if (grid[i][j] == GridEntry.E) {
-                    grid[i][j] = GridEntry.O // make the test move
+                    grid[i][j] = opponentMarker // make the test move
                     val score =
-                        miniMax(grid, 1, 0, Int.MIN_VALUE, Int.MAX_VALUE) // call miniMax for player
+                        miniMax(grid, 1, 0, Int.MIN_VALUE, Int.MAX_VALUE, opponentMarker, playerMarker) // call miniMax for player
                     grid[i][j] = GridEntry.E // undo the test move
                     if (score > bestScore) {    // find new best score and move
                         bestScore = score
@@ -76,20 +78,27 @@ fun runAITurn(
                 }
             }
         }
-        grid[outputI][outputJ] = GridEntry.O    // set move and return
+        grid[outputI][outputJ] = opponentMarker    // set move and return
         Log.i("hardDiff", "is Hard mode") // testing only
     }
     return grid
 }
 
-fun miniMax(grid: Array<Array<GridEntry>>, player: Int, depth: Int, alpha: Int, beta: Int): Int {
+fun miniMax(
+    grid: Array<Array<GridEntry>>,
+    player: Int,
+    depth: Int,
+    alpha: Int,
+    beta: Int,
+    oppMark: GridEntry,
+    playerMark: GridEntry): Int {
     val winnerCheck = findWinners(grid)    // winner = GridEntry.X, GridEntry.O, GridEntry.E
     var gridFull = 0
     var bestScore: Int
-    if (winnerCheck == GridEntry.X) {     // depth is used to find earliest win
+    if (winnerCheck == playerMark) {     // depth is used to find earliest win
         return -10 + depth
     }
-    if (winnerCheck == GridEntry.O) {
+    if (winnerCheck == oppMark) {
         return 10 - depth
     }
     for (i in 0 until grid.size) {    // finds if grid is full and if so dont run
@@ -109,8 +118,8 @@ fun miniMax(grid: Array<Array<GridEntry>>, player: Int, depth: Int, alpha: Int, 
         for (i in 0 until grid.size) {
             for (j in 0 until grid.size) {
                 if (grid[i][j] == GridEntry.E) {
-                    grid[i][j] = GridEntry.O
-                    val score = miniMax(grid, 1, depth + 1, newAlpha, beta)
+                    grid[i][j] = oppMark
+                    val score = miniMax(grid, 1, depth + 1, newAlpha, beta, oppMark, playerMark)
                     grid[i][j] = GridEntry.E
                     bestScore = maxOf(score, bestScore)     // find max of old and new score
                     newAlpha = maxOf(newAlpha, bestScore)   // update alpha to trim tree
@@ -126,8 +135,8 @@ fun miniMax(grid: Array<Array<GridEntry>>, player: Int, depth: Int, alpha: Int, 
         for (i in 0 until grid.size) {
             for (j in 0 until grid.size) {
                 if (grid[i][j] == GridEntry.E) {
-                    grid[i][j] = GridEntry.X
-                    val score = miniMax(grid, 0, depth + 1, alpha, newBeta)
+                    grid[i][j] = playerMark
+                    val score = miniMax(grid, 0, depth + 1, alpha, newBeta, oppMark, playerMark)
                     grid[i][j] = GridEntry.E
                     bestScore = minOf(score, bestScore)     // same as above but minimize score
                     newBeta = minOf(newBeta, bestScore)     // trim using new beta
