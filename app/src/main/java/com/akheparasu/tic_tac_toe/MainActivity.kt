@@ -1,5 +1,6 @@
 package com.akheparasu.tic_tac_toe
 
+import android.bluetooth.BluetoothAdapter
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -61,6 +62,19 @@ class MainActivity : ComponentActivity() {
             AddScoreViewModelFactory(application)
         }
         connectionService = Connections(this)
+        val missingPermissions = connectionService.getMissingPermissions()
+        val btEnableLauncher = registerForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { _ ->
+            connectionService.getMissingPermissions()
+        }
+        registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            if (permissions.values.all { it }) {
+                btEnableLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+            }
+        }.launch(missingPermissions.first + missingPermissions.second)
         setContent {
             val navController: NavHostController = rememberNavController()
             CompositionLocalProvider(
@@ -70,14 +84,6 @@ class MainActivity : ComponentActivity() {
                 LocalAudioPlayer provides audioPlayerContext,
             ) {
                 val onlineSetupStage = connectionService.onlineSetupStage.collectAsState()
-                val missingPermissions = connectionService.getMissingPermissions()
-                registerForActivityResult(
-                    ActivityResultContracts.RequestMultiplePermissions()
-                ) { permissions ->
-                    if (permissions.values.all { it }) {
-                        connectionService.getMissingPermissions()
-                    }
-                }.launch(missingPermissions.first + missingPermissions.second)
                 TicTacToeTheme {
                     Scaffold(
                         topBar = { AppBar() },
