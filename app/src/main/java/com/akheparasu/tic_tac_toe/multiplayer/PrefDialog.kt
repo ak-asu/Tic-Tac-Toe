@@ -81,7 +81,7 @@ fun PrefDialog() {
 
     AlertDialog(
         onDismissRequest = { },
-        title = { Text("Select Who Goes First") },
+        title = { Text("Who Goes First") },
         text = {
             Column(
                 verticalArrangement = Arrangement.Center,

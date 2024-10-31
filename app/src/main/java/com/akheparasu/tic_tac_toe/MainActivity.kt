@@ -43,6 +43,7 @@ import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
 import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
 import com.akheparasu.tic_tac_toe.utils.Preference
+import kotlin.random.Random
 
 
 class MainActivity : ComponentActivity() {
@@ -103,10 +104,20 @@ class MainActivity : ComponentActivity() {
                             composable("game/{gameModeName}/{preference}/{deviceAddress}") { backStackEntry ->
                                 val gameModeName =
                                     backStackEntry.arguments?.getString("gameModeName")
-                                val preference = Preference.valueOf(
+                                val originalPreference = Preference.valueOf(
                                     backStackEntry.arguments?.getString("preference")
                                         ?: Preference.First.name
                                 )
+                                val preference =
+                                    if (originalPreference == Preference.NoPreference) {
+                                        if (Random.nextBoolean()) {
+                                            Preference.First
+                                        } else {
+                                            Preference.Second
+                                        }
+                                    } else {
+                                        originalPreference
+                                    }
                                 val originalConnectedDeviceAddress =
                                     backStackEntry.arguments?.getString("deviceAddress")
                                 val context = LocalContext.current

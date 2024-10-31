@@ -419,7 +419,7 @@ fun GridCell(value: String, maxCellSize: Float, onTap: () -> Unit) {
                 maxHeight = maxCellSize.dp
             )
             .padding((PADDING_HEIGHT / 2).dp)
-            .clickable { onTap() },
+            .clickable (enabled = value.isEmpty()) { onTap() },
         contentAlignment = Alignment.Center
     ) {
         Canvas(
