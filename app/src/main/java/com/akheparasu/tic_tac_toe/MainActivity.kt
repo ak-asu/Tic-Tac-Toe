@@ -128,7 +128,10 @@ class MainActivity : ComponentActivity() {
                                                 addScoreViewModel
                                             )
                                         } else {
-                                            navController.popBackStack()
+//                                            navController.navigate("home") {
+//                                                popUpTo("home") { inclusive = true }
+//                                            }
+                                            connectionService.setOnlineSetupStage(OnlineSetupStage.Idle)
                                             Toast.makeText(
                                                 context,
                                                 "Connection error",

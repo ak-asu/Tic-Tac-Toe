@@ -124,7 +124,6 @@ fun HomeScreen() {
         }
         if (showDevicesDialog.value) {
             DevicesDialog(onDismiss = {
-                connectionService.disconnectDevice()
                 showDevicesDialog.value = false
             })
         }

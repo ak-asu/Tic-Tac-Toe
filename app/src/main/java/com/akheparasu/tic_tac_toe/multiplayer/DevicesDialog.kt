@@ -87,7 +87,7 @@ fun DevicesDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         modifier = Modifier.fillMaxHeight(0.75f),
-        onDismissRequest = { onDismiss() },
+        onDismissRequest = { },
         title = { Text("Select Device") },
         text = {
             Column(
@@ -129,7 +129,12 @@ fun DevicesDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = { },
-        dismissButton = { Button(onClick = { onDismiss() }) { Text("Cancel") } }
+        dismissButton = {
+            Button(onClick = {
+                connectionService.disconnectDevice()
+                onDismiss()
+            }) { Text("Cancel") }
+        }
     )
 }
 
@@ -142,7 +147,7 @@ fun DeviceItem(device: BluetoothDevice) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clickable (enabled = !isConnecting.value) {
+            .clickable(enabled = !isConnecting.value) {
                 connectionService.connectDevice(device)
             }
     ) {

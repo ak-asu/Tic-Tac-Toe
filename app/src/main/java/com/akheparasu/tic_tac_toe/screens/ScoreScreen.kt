@@ -74,7 +74,7 @@ fun ScoreScreen(
                             Toast.LENGTH_SHORT
                         ).show()
                         navController?.navigate("home") {
-                            popUpTo("home") { inclusive = false }
+                            popUpTo("home") { inclusive = true }
                         }
                     } else {
                         connectionService.receivedDataModel =

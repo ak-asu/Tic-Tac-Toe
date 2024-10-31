@@ -274,7 +274,7 @@ fun GameScreen(
         audioController.onGameStart()
         if (gameMode == GameMode.TwoDevices) {
             connectionService.setOnDataReceived { dataModel ->
-                if (!dataModel.gameState.reset || dataModel.gameState.turn.toInt() < connectionService.receivedDataModel.gameState.turn.toInt()) {
+                if (!dataModel.gameState.reset && dataModel.gameState.turn.toInt() < connectionService.receivedDataModel.gameState.turn.toInt()) {
                     connectionService.sendData(connectionService.receivedDataModel)
                 } else {
                     connectionService.receivedDataModel = dataModel

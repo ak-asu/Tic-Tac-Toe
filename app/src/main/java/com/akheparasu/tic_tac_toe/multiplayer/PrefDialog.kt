@@ -1,6 +1,7 @@
 package com.akheparasu.tic_tac_toe.multiplayer
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -32,44 +33,33 @@ fun PrefDialog() {
     val onlineSetupStage = connectionService.onlineSetupStage.collectAsState()
     val prefClickAction: (Preference) -> Unit = {
         if (selectedDevice.value == null) {
-            connectionService.setOnlineSetupStage(OnlineSetupStage.Idle)
+            connectionService.disconnectDevice()
         } else {
-            connectionService.sendData(
-                DataModel(
-                    metaData = MetaData(
-                        choices = listOf(
-                            PlayerChoice(
-                                id = PLAYER_1,
-                                name = if (connectionService.getPlayerId() == PLAYER_2) {
-                                    selectedDevice.value!!.address
-                                } else {
-                                    connectionService.receivedDataModel.metaData.choices.first().name
-                                }
-                            ),
-                            PlayerChoice(
-                                id = PLAYER_2,
-                                name = if (connectionService.getPlayerId() == PLAYER_1) {
-                                    selectedDevice.value!!.address
-                                } else {
-                                    connectionService.receivedDataModel.metaData.choices.last().name
-                                }
-                            )
-                        ),
-                        miniGame = MiniGame(
-                            player1Choice = if (connectionService.getPlayerId() == PLAYER_1 && it == Preference.Second) {
-                                selectedDevice.value!!.address
+            connectionService.receivedDataModel = connectionService.receivedDataModel.copy(
+                metaData = connectionService.receivedDataModel.metaData.copy(
+                    miniGame = MiniGame(
+                        player1Choice = if (connectionService.getPlayerId() == PLAYER_1) {
+                            if (it == Preference.First) {
+                                connectionService.receivedDataModel.metaData.choices.first().name
                             } else {
-                                connectionService.receivedDataModel.metaData.miniGame.player1Choice
-                            },
-                            player2Choice = if (connectionService.getPlayerId() == PLAYER_2 && it == Preference.Second) {
-                                selectedDevice.value!!.address
-                            } else {
-                                connectionService.receivedDataModel.metaData.miniGame.player2Choice
+                                connectionService.receivedDataModel.metaData.choices.last().name
                             }
-                        )
+                        } else {
+                            ""
+                        },
+                        player2Choice = if (connectionService.getPlayerId() == PLAYER_2) {
+                            if (it == Preference.First) {
+                                connectionService.receivedDataModel.metaData.choices.last().name
+                            } else {
+                                connectionService.receivedDataModel.metaData.choices.first().name
+                            }
+                        } else {
+                            ""
+                        }
                     )
                 )
             )
+            connectionService.sendData(connectionService.receivedDataModel)
             connectionService.setOnlineSetupStage(OnlineSetupStage.Initialised)
         }
     }
@@ -117,26 +107,8 @@ fun PrefDialog() {
                 ) {
                     RoundedRectButton(
                         onClick = {
-                            connectionService.receivedDataModel = DataModel(
-                                metaData = MetaData(
-                                    choices = listOf(
-                                        PlayerChoice(
-                                            id = PLAYER_1,
-                                            name = if (connectionService.getPlayerId() == PLAYER_1) {
-                                                connectionService.receivedDataModel.metaData.choices.first().name
-                                            } else {
-                                                selectedDevice.value!!.address
-                                            }
-                                        ),
-                                        PlayerChoice(
-                                            id = PLAYER_2,
-                                            name = if (connectionService.getPlayerId() == PLAYER_2) {
-                                                connectionService.receivedDataModel.metaData.choices.last().name
-                                            } else {
-                                                selectedDevice.value!!.address
-                                            }
-                                        )
-                                    ),
+                            connectionService.receivedDataModel = connectionService.receivedDataModel.copy(
+                                metaData = connectionService.receivedDataModel.metaData.copy(
                                     miniGame = MiniGame(
                                         player1Choice = connectionService.receivedDataModel.metaData.miniGame.player1Choice.ifEmpty {
                                             connectionService.receivedDataModel.metaData.miniGame.player2Choice
