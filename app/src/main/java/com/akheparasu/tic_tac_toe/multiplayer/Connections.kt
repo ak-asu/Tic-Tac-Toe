@@ -14,7 +14,6 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
@@ -451,7 +450,9 @@ class Connections(private val context: Context) {
                                 }
                             }
                             setOnlineSetupStage(OnlineSetupStage.GameStart)
-                        } else if (onlineSetupStage.value == OnlineSetupStage.GameStart) {
+                        } else if (onlineSetupStage.value == OnlineSetupStage.GameStart ||
+                            onlineSetupStage.value == OnlineSetupStage.GameOver
+                        ) {
                             onDataReceived?.let { it(message) }
                         } else {
                             cancel()
@@ -476,11 +477,12 @@ class Connections(private val context: Context) {
         }
 
         fun cancel() {
+            isRunning = false
             receivedDataModel = DataModel()
             handler.removeCallbacks(runnable)
             bluetoothSocket.close()
+            setOnDataReceived(null)
             _connectedDevice.value = null
-            isRunning = false
             connectedThread = null
             setOnlineSetupStage(OnlineSetupStage.Idle)
         }

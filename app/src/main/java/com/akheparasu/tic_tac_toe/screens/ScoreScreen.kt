@@ -2,6 +2,7 @@ package com.akheparasu.tic_tac_toe.screens
 
 import android.bluetooth.BluetoothDevice
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -10,7 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,14 +43,24 @@ fun ScoreScreen(
     val audioController = LocalAudioPlayer.current
     val navController = LocalNavController.current
     val connectionService = LocalConnectionService.current
+    val onlineSetupStage = if (gameMode == GameMode.TwoDevices) {
+        connectionService.onlineSetupStage.collectAsState()
+    } else {
+        null
+    }
 
-    DisposableEffect(Unit) {
-        when (gameResult) {
-            GameResult.Win -> audioController.onWin()
-            GameResult.Fail -> audioController.onFail()
-            GameResult.Draw -> audioController.onDraw()
+    if (gameMode == GameMode.TwoDevices) {
+        LaunchedEffect(onlineSetupStage?.value) {
+            if (onlineSetupStage?.value == OnlineSetupStage.GameStart) {
+                navController?.navigate("game/${gameMode.name}/${preference.name}/${originalConnectedDevice?.address}") {
+                    popUpTo("home") { inclusive = false }
+                }
+            }
         }
-        onDispose { }
+        BackHandler {
+            connectionService.disconnectDevice()
+            navController?.popBackStack(route = "home", inclusive = false)
+        }
     }
 
     Column(
@@ -73,20 +85,18 @@ fun ScoreScreen(
                             "Connection error",
                             Toast.LENGTH_SHORT
                         ).show()
+                        connectionService.disconnectDevice()
                         navController?.navigate("home") {
-                            popUpTo("home") { inclusive = true }
+                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                            launchSingleTop = true
                         }
                     } else {
                         connectionService.receivedDataModel =
                             connectionService.receivedDataModel.copy(
                                 gameState = GameState()
                             )
-                        connectionService.setOnlineSetupStage(
-                            OnlineSetupStage.GameStart
-                        )
-                        connectionService.connectDevice(
-                            originalConnectedDevice
-                        )
+                        connectionService.sendData(connectionService.receivedDataModel)
+                        connectionService.setOnlineSetupStage(OnlineSetupStage.GameStart)
                     }
                 } else {
                     navController?.navigate("game/${gameMode.name}/${preference}/${originalConnectedDevice?.address}") {

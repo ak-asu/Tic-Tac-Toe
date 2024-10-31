@@ -5,6 +5,7 @@ import android.app.Application
 import android.bluetooth.BluetoothDevice
 import android.content.pm.ActivityInfo
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -194,6 +195,12 @@ fun GameScreen(
         }
     }
     val onGoToScoreScreen: (GameResultData) -> Unit = {
+        when (gameResultData?.gameResult) {
+            GameResult.Win -> audioController.onWin()
+            GameResult.Fail -> audioController.onFail()
+            GameResult.Draw -> audioController.onDraw()
+            null -> {}
+        }
         if (gameMode == GameMode.TwoDevices && connectedDevice?.value?.address == originalConnectedDevice!!.address) {
             val currentDeviceAddress =
                 if (originalConnectedDevice.address == connectionService.receivedDataModel.metaData.choices.first().name) {
@@ -215,6 +222,16 @@ fun GameScreen(
                     )
                 )
             )
+            connectionService.setOnDataReceived { dataModel ->
+                if (dataModel.gameState.connectionEstablished &&
+                    dataModel.gameState.winner.isEmpty() &&
+                    !dataModel.gameState.draw && !dataModel.gameState.reset &&
+                    dataModel.gameState.turn.toInt() == 0
+                ) {
+                    connectionService.setOnlineSetupStage(OnlineSetupStage.GameStart)
+                }
+            }
+            connectionService.setOnlineSetupStage(OnlineSetupStage.GameOver)
         }
         navController?.navigate("score/${gameMode.name}/${preference.name}/${originalConnectedDevice?.address}/${difficultyFlow.value}/${it.gameResult.name}") {
             popUpTo("home") { inclusive = false }
@@ -231,14 +248,19 @@ fun GameScreen(
                 }.await()
                 playerTurn = true
             } else if (gameMode == GameMode.TwoDevices) {
-                connectionService.sendData(
-                    connectionService.receivedDataModel.copy(
-                        gameState = GameState(
-                            board = grid.map { it.map { e -> e.name } },
-                            turn = "${connectionService.receivedDataModel.gameState.turn.toInt() + 1}"
-                        )
+                // done so that does not change turn when screen initializes
+                val num = if (grid.flatten().any { it != GridEntry.E }) {
+                    1
+                } else {
+                    0
+                }
+                connectionService.receivedDataModel = connectionService.receivedDataModel.copy(
+                    gameState = GameState(
+                        board = grid.map { it.map { e -> e.name } },
+                        turn = "${connectionService.receivedDataModel.gameState.turn.toInt() + num}"
                     )
                 )
+                connectionService.sendData(connectionService.receivedDataModel)
             }
         }
         gameResultData = checkWinner()
@@ -250,8 +272,10 @@ fun GameScreen(
             }
         }
         LaunchedEffect(onlineSetupStage?.value) {
-            if (onlineSetupStage?.value != OnlineSetupStage.GameStart) {
-                navController?.popBackStack()
+            if (onlineSetupStage?.value != OnlineSetupStage.GameStart &&
+                onlineSetupStage?.value != OnlineSetupStage.GameOver
+            ) {
+                connectionService.disconnectDevice()
             }
         }
         LaunchedEffect(resetGame) {
@@ -261,11 +285,15 @@ fun GameScreen(
                         connectionService.receivedDataModel.copy(gameState = GameState(reset = true))
                     )
                 }
-                connectionService.receivedDataModel = connectionService.receivedDataModel.copy(gameState = GameState())
+                connectionService.receivedDataModel =
+                    connectionService.receivedDataModel.copy(gameState = GameState())
                 grid = Array(3) { Array(3) { GridEntry.E } }
                 playerTurn = preference == Preference.First
                 resetGame = false
             }
+        }
+        BackHandler {
+            connectionService.disconnectDevice()
         }
     }
     DisposableEffect(Unit) {
@@ -286,11 +314,12 @@ fun GameScreen(
                     .toTypedArray()
                 gameResultData = checkWinner()
                 if (!(connectionService.receivedDataModel.gameState.winner.isNotEmpty() || connectionService.receivedDataModel.gameState.draw)) {
-                    playerTurn = if (preference == Preference.First) {
-                        connectionService.receivedDataModel.gameState.turn.toInt() % 2 == 0
-                    } else {
-                        connectionService.receivedDataModel.gameState.turn.toInt() % 2 == 1
-                    }
+                    playerTurn =
+                        connectionService.receivedDataModel.gameState.turn.toInt() % 2 == if (preference == Preference.First) {
+                            0
+                        } else {
+                            1
+                        }
                 } else {
                     // Can check winner/draw, but no need as already done before
                 }
@@ -298,8 +327,6 @@ fun GameScreen(
         }
         onDispose {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-            connectionService.setOnDataReceived(null)
-            connectionService.disconnectDevice()
         }
     }
 

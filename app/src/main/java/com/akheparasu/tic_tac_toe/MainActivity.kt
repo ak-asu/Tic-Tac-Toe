@@ -3,10 +3,8 @@ package com.akheparasu.tic_tac_toe
 import android.bluetooth.BluetoothAdapter
 import android.content.Intent
 import android.os.Bundle
-import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -121,22 +119,25 @@ class MainActivity : ComponentActivity() {
                                                 originalConnectedDeviceAddress
                                             )
                                         if (originalConnectedDevice != null) {
-                                            GameScreen(
-                                                gameMode,
-                                                preference,
-                                                originalConnectedDevice,
-                                                addScoreViewModel
-                                            )
+                                            if (onlineSetupStage.value == OnlineSetupStage.GameStart) {
+                                                GameScreen(
+                                                    gameMode,
+                                                    preference,
+                                                    originalConnectedDevice,
+                                                    addScoreViewModel
+                                                )
+                                            }
                                         } else {
-//                                            navController.navigate("home") {
-//                                                popUpTo("home") { inclusive = true }
-//                                            }
                                             connectionService.setOnlineSetupStage(OnlineSetupStage.Idle)
                                             Toast.makeText(
                                                 context,
                                                 "Connection error",
                                                 Toast.LENGTH_SHORT
                                             ).show()
+                                            navController.popBackStack(
+                                                route = "home",
+                                                inclusive = false
+                                            )
                                         }
                                     } else {
                                         GameScreen(
@@ -147,12 +148,12 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                 } else {
-                                    navController.popBackStack()
                                     Toast.makeText(
                                         context,
                                         "Game selection error",
                                         Toast.LENGTH_SHORT
                                     ).show()
+                                    navController.popBackStack(route = "home", inclusive = false)
                                 }
                             }
                             composable("score/{gameModeName}/{preference}/{deviceAddress}/{difficulty}/{gameResult}") { backStackEntry ->
@@ -184,12 +185,12 @@ class MainActivity : ComponentActivity() {
                                         )
                                     )
                                 } else {
-                                    navController.popBackStack()
                                     Toast.makeText(
                                         context,
                                         "Score screen error",
                                         Toast.LENGTH_SHORT
                                     ).show()
+                                    navController.popBackStack(route = "home", inclusive = false)
                                 }
                             }
                             composable("career") { CareerScreen(careerViewModel) }

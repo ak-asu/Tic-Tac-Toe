@@ -1,7 +1,6 @@
 package com.akheparasu.tic_tac_toe.multiplayer
 
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -107,18 +106,19 @@ fun PrefDialog() {
                 ) {
                     RoundedRectButton(
                         onClick = {
-                            connectionService.receivedDataModel = connectionService.receivedDataModel.copy(
-                                metaData = connectionService.receivedDataModel.metaData.copy(
-                                    miniGame = MiniGame(
-                                        player1Choice = connectionService.receivedDataModel.metaData.miniGame.player1Choice.ifEmpty {
-                                            connectionService.receivedDataModel.metaData.miniGame.player2Choice
-                                        },
-                                        player2Choice = connectionService.receivedDataModel.metaData.miniGame.player1Choice.ifEmpty {
-                                            connectionService.receivedDataModel.metaData.miniGame.player2Choice
-                                        }
+                            connectionService.receivedDataModel =
+                                connectionService.receivedDataModel.copy(
+                                    metaData = connectionService.receivedDataModel.metaData.copy(
+                                        miniGame = MiniGame(
+                                            player1Choice = connectionService.receivedDataModel.metaData.miniGame.player1Choice.ifEmpty {
+                                                connectionService.receivedDataModel.metaData.miniGame.player2Choice
+                                            },
+                                            player2Choice = connectionService.receivedDataModel.metaData.miniGame.player1Choice.ifEmpty {
+                                                connectionService.receivedDataModel.metaData.miniGame.player2Choice
+                                            }
+                                        )
                                     )
                                 )
-                            )
                             connectionService.sendData(connectionService.receivedDataModel)
                             connectionService.setOnlineSetupStage(OnlineSetupStage.GameStart)
                         },

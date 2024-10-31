@@ -129,6 +129,7 @@ enum class OnlineSetupStage {
     Preference,
     Initialised,
     GameStart,
+    GameOver,
     NoService,
     Idle;
 }

@@ -67,6 +67,7 @@ fun DevicesDialog(onDismiss: () -> Unit) {
     }
 
     DisposableEffect(Unit) {
+        connectionService.disconnectDevice()
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 if (connectionService.getMissingPermissions().first.isNotEmpty()) {
