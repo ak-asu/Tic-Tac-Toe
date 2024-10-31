@@ -27,7 +27,9 @@ import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.LocalSettings
 import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
+import com.akheparasu.tic_tac_toe.utils.PADDING_HEIGHT
 import com.akheparasu.tic_tac_toe.utils.Preference
+import com.akheparasu.tic_tac_toe.utils.SPACER_HEIGHT
 
 
 @Composable
@@ -75,7 +77,7 @@ fun HomeScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(PADDING_HEIGHT.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -121,7 +123,9 @@ fun HomeScreen() {
             )
         }
         if (showDevicesDialog.value) {
-            DevicesDialog(onDismiss = { showDevicesDialog.value = false })
+            DevicesDialog(onDismiss = {
+                showDevicesDialog.value = false
+            })
         }
         RoundedRectButton(onClick = {
             gameMode.value = GameMode.Computer
@@ -132,7 +136,7 @@ fun HomeScreen() {
                 gameMode.value = null
             }
         }, text = "Play against ${GameMode.Computer.getDisplayText()}")
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(SPACER_HEIGHT.dp))
         RoundedRectButton(onClick = {
             gameMode.value = GameMode.OneDevice
             if (playerPrefFlow.value == Preference.AskEveryTime) {
@@ -142,12 +146,12 @@ fun HomeScreen() {
                 gameMode.value = null
             }
         }, text = "Play on ${GameMode.OneDevice.getDisplayText()}")
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(SPACER_HEIGHT.dp))
         RoundedRectButton(onClick = {
             gameMode.value = GameMode.TwoDevices
             showPrefDialog.value = false
         }, text = "Play on ${GameMode.TwoDevices.getDisplayText()}")
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(SPACER_HEIGHT.dp))
         RoundedRectButton(onClick = {
             navController?.navigate("career")
             gameMode.value = null

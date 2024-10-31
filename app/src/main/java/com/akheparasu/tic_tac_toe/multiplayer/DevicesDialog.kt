@@ -1,11 +1,9 @@
 package com.akheparasu.tic_tac_toe.multiplayer
 
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.content.Intent
 import android.provider.Settings
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -25,9 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -35,9 +30,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
-import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
+import com.akheparasu.tic_tac_toe.utils.PADDING_HEIGHT
+import com.akheparasu.tic_tac_toe.utils.SPACER_HEIGHT
 
 @SuppressLint("MissingPermission")
 @Composable
@@ -65,14 +61,13 @@ fun DevicesDialog(onDismiss: () -> Unit) {
     }
 
     LaunchedEffect(onlineSetupStage.value) {
-        if (!(onlineSetupStage.value == OnlineSetupStage.Idle ||
-                    onlineSetupStage.value == OnlineSetupStage.NoService)
-        ) {
+        if (onlineSetupStage.value != OnlineSetupStage.Idle) {
             onDismiss()
         }
     }
 
     DisposableEffect(Unit) {
+        connectionService.disconnectDevice()
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 if (connectionService.getMissingPermissions().first.isNotEmpty()) {
@@ -93,7 +88,7 @@ fun DevicesDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         modifier = Modifier.fillMaxHeight(0.75f),
-        onDismissRequest = { onDismiss() },
+        onDismissRequest = { },
         title = { Text("Select Device") },
         text = {
             Column(
@@ -120,7 +115,7 @@ fun DevicesDialog(onDismiss: () -> Unit) {
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(SPACER_HEIGHT.dp))
                 Text("Paired Devices:")
                 LazyColumn(
                     modifier = Modifier
@@ -135,7 +130,12 @@ fun DevicesDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = { },
-        dismissButton = { Button(onClick = { onDismiss() }) { Text("Cancel") } }
+        dismissButton = {
+            Button(onClick = {
+                connectionService.disconnectDevice()
+                onDismiss()
+            }) { Text("Cancel") }
+        }
     )
 }
 
@@ -143,17 +143,18 @@ fun DevicesDialog(onDismiss: () -> Unit) {
 @Composable
 fun DeviceItem(device: BluetoothDevice) {
     val connectionService = LocalConnectionService.current
+    val isConnecting = connectionService.isConnecting.collectAsState()
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clickable {
+            .clickable(enabled = !isConnecting.value) {
                 connectionService.connectDevice(device)
             }
     ) {
         Text(
             text = device.name,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(PADDING_HEIGHT.dp)
         )
     }
 }

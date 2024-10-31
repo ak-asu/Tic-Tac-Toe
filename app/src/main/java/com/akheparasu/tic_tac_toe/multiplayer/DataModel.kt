@@ -1,5 +1,8 @@
 package com.akheparasu.tic_tac_toe.multiplayer
 
+import com.akheparasu.tic_tac_toe.utils.PLAYER_1
+import com.akheparasu.tic_tac_toe.utils.PLAYER_2
+
 
 data class DataModel(
     val gameState: GameState = GameState(),
@@ -17,8 +20,8 @@ data class GameState(
 
 data class MetaData(
     val choices: List<PlayerChoice> = listOf(
-        PlayerChoice("player1", ""),
-        PlayerChoice("player2", "")
+        PlayerChoice(PLAYER_1, ""),
+        PlayerChoice(PLAYER_2, "")
     ),
     val miniGame: MiniGame = MiniGame()
 )

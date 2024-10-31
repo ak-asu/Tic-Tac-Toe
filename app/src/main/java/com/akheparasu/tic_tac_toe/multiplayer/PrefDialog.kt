@@ -18,7 +18,10 @@ import com.akheparasu.tic_tac_toe.utils.GameMode
 import com.akheparasu.tic_tac_toe.utils.LocalConnectionService
 import com.akheparasu.tic_tac_toe.utils.LocalNavController
 import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
+import com.akheparasu.tic_tac_toe.utils.PLAYER_1
+import com.akheparasu.tic_tac_toe.utils.PLAYER_2
 import com.akheparasu.tic_tac_toe.utils.Preference
+import com.akheparasu.tic_tac_toe.utils.SPACER_HEIGHT
 
 @SuppressLint("MissingPermission")
 @Composable
@@ -29,32 +32,33 @@ fun PrefDialog() {
     val onlineSetupStage = connectionService.onlineSetupStage.collectAsState()
     val prefClickAction: (Preference) -> Unit = {
         if (selectedDevice.value == null) {
-            connectionService.setOnlineSetupStage(OnlineSetupStage.Idle)
+            connectionService.disconnectDevice()
         } else {
-            connectionService.sendData(
-                DataModel(
-                    gameState = GameState(connectionEstablished = true),
-                    metaData = MetaData(
-                        choices = listOf(
-                            PlayerChoice(
-                                id = "player1",
-                                name = ""
-                            ),
-                            PlayerChoice(
-                                id = "player2",
-                                name = selectedDevice.value!!.address
-                            )
-                        ),
-                        miniGame = MiniGame(
-                            player1Choice = if (it == Preference.Second) {
-                                selectedDevice.value!!.address
+            connectionService.receivedDataModel = connectionService.receivedDataModel.copy(
+                metaData = connectionService.receivedDataModel.metaData.copy(
+                    miniGame = MiniGame(
+                        player1Choice = if (connectionService.getPlayerId() == PLAYER_1) {
+                            if (it == Preference.First) {
+                                connectionService.receivedDataModel.metaData.choices.first().name
                             } else {
-                                ""
+                                connectionService.receivedDataModel.metaData.choices.last().name
                             }
-                        )
+                        } else {
+                            ""
+                        },
+                        player2Choice = if (connectionService.getPlayerId() == PLAYER_2) {
+                            if (it == Preference.First) {
+                                connectionService.receivedDataModel.metaData.choices.last().name
+                            } else {
+                                connectionService.receivedDataModel.metaData.choices.first().name
+                            }
+                        } else {
+                            ""
+                        }
                     )
                 )
             )
+            connectionService.sendData(connectionService.receivedDataModel)
             connectionService.setOnlineSetupStage(OnlineSetupStage.Initialised)
         }
     }
@@ -71,8 +75,6 @@ fun PrefDialog() {
                         }
                     }/${selectedDevice.value?.address}"
                 )
-            } else if (onlineSetupStage.value != OnlineSetupStage.Initialised) {
-                connectionService.receivedDataModel = DataModel()
             }
         }
     }
@@ -90,43 +92,40 @@ fun PrefDialog() {
                         onClick = { prefClickAction(Preference.First) },
                         text = "Me"
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(SPACER_HEIGHT.dp))
                     RoundedRectButton(
                         onClick = { prefClickAction(Preference.Second) },
                         text = "Opponent"
                     )
-                } else if (connectionService.receivedDataModel.metaData.miniGame.player1Choice.isEmpty() &&
+                } else if (
+                    ((connectionService.receivedDataModel.metaData.miniGame.player1Choice.isEmpty() &&
+                            connectionService.getPlayerId() == PLAYER_1) ||
+                            (connectionService.receivedDataModel.metaData.miniGame.player2Choice.isEmpty() &&
+                                    connectionService.getPlayerId() == PLAYER_2)) &&
                     onlineSetupStage.value == OnlineSetupStage.Initialised
                 ) {
                     RoundedRectButton(
                         onClick = {
-                            connectionService.receivedDataModel = DataModel(
-                                gameState = GameState(connectionEstablished = true),
-                                metaData = MetaData(
-                                    choices = listOf(
-                                        PlayerChoice(
-                                            id = "player1",
-                                            name = selectedDevice.value!!.address
-                                        ),
-                                        connectionService.receivedDataModel.metaData.choices.last()
-                                    ),
-                                    miniGame = MiniGame(
-                                        player1Choice = connectionService.receivedDataModel.metaData.miniGame.player1Choice.ifEmpty {
-                                            selectedDevice.value!!.address
-                                        },
-                                        player2Choice = connectionService.receivedDataModel.metaData.miniGame.player1Choice.ifEmpty {
-                                            selectedDevice.value!!.address
-                                        }
+                            connectionService.receivedDataModel =
+                                connectionService.receivedDataModel.copy(
+                                    metaData = connectionService.receivedDataModel.metaData.copy(
+                                        miniGame = MiniGame(
+                                            player1Choice = connectionService.receivedDataModel.metaData.miniGame.player1Choice.ifEmpty {
+                                                connectionService.receivedDataModel.metaData.miniGame.player2Choice
+                                            },
+                                            player2Choice = connectionService.receivedDataModel.metaData.miniGame.player1Choice.ifEmpty {
+                                                connectionService.receivedDataModel.metaData.miniGame.player2Choice
+                                            }
+                                        )
                                     )
                                 )
-                            )
                             connectionService.sendData(connectionService.receivedDataModel)
                             connectionService.setOnlineSetupStage(OnlineSetupStage.GameStart)
                         },
                         text = "Play"
                     )
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(SPACER_HEIGHT.dp))
                 RoundedRectButton(onClick = {
                     connectionService.sendData(
                         DataModel(gameState = GameState(connectionEstablished = false))

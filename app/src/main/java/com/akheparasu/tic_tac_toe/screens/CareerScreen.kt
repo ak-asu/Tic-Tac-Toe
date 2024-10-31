@@ -1,15 +1,15 @@
 package com.akheparasu.tic_tac_toe.screens
 
 import android.app.Application
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +31,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.akheparasu.tic_tac_toe.storage.DataEntity
 import com.akheparasu.tic_tac_toe.storage.StorageDB
+import com.akheparasu.tic_tac_toe.utils.PADDING_HEIGHT
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -46,56 +47,58 @@ fun CareerScreen(careerViewModel: CareerViewModel) {
         careerViewModel.getAllRecords()
     }
 
-    LazyColumn(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
-            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface)),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(PADDING_HEIGHT.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.Gray),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                repeat(headers.size) { index ->
-                    Text(
-                        headers[index],
-                        modifier = Modifier
-                            .weight(1f)
-                            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface)),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White,
-                        textAlign = TextAlign.Center
-                    )
-                }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Gray),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(headers.size) { index ->
+                Text(
+                    headers[index],
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(PADDING_HEIGHT.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White,
+                    textAlign = TextAlign.Center
+                )
             }
         }
-        items(records.size) { index ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val values = listOf(
-                    SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(records[index].date),
-                    records[index].winner.getDisplayText(),
-                    records[index].difficulty?.name ?: records[index].gameMode.getDisplayText()
-                )
-                repeat(values.size) { i ->
-                    Text(
-                        values[i],
-                        modifier = Modifier
-                            .weight(1f)
-                            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface)),
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center
+        LazyColumn {
+            items(records.size) { index ->
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val values = listOf(
+                        SimpleDateFormat(
+                            "yyyy-MM-dd",
+                            Locale.getDefault()
+                        ).format(records[index].date),
+                        records[index].winner.getDisplayText(),
+                        records[index].difficulty?.name ?: records[index].gameMode.getDisplayText()
                     )
+                    repeat(values.size) { i ->
+                        Text(
+                            values[i],
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(PADDING_HEIGHT.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         }
