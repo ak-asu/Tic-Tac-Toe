@@ -2,87 +2,91 @@ package com.akheparasu.tic_tac_toe.algorithms
 
 import com.akheparasu.tic_tac_toe.utils.Difficulty
 import com.akheparasu.tic_tac_toe.utils.GridEntry
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
-fun runAITurn(
+suspend fun runAITurn(
     grid: Array<Array<GridEntry>>,
     diff: Difficulty,
     playerMarker: GridEntry,
     opponentMarker: GridEntry
 ): Array<Array<GridEntry>> {
-    var randEasy = 0                    // var and val used
-    val randMed = Random.nextBoolean()  // the 50 / 50 for easy or hard per turn
-    val gridSize = grid.size
-    val gridCheckI = mutableListOf<Int>()
-    val gridCheckJ = mutableListOf<Int>()
-    var gridEmpty = 0
-    var gridCount = 0
+    return withContext(Dispatchers.IO) {
+        var randEasy = 0                    // var and val used
+        val randMed = Random.nextBoolean()  // the 50 / 50 for easy or hard per turn
+        val gridSize = grid.size
+        val gridCheckI = mutableListOf<Int>()
+        val gridCheckJ = mutableListOf<Int>()
+        var gridEmpty = 0
+        var gridCount = 0
 
-    for (i in 0 until gridSize) {     // find spots that are filled or empty
-        for (j in 0 until gridSize) {
-            if (grid[i][j] == GridEntry.E) {
-                gridCheckI.add(i)
-                gridCheckJ.add(j)
-            } else {
-                gridEmpty += 1
-            }
-            gridCount += 1
-        }
-    }
-
-    if (diff == Difficulty.Easy) {
-        if (gridEmpty == (gridSize * gridSize)) {
-            return grid     // test for full board
-        }
-        randEasy = Random.nextInt((gridSize * gridSize) - gridEmpty)
-        val outputI = gridCheckI[randEasy]  // takes the random value and uses it -
-        val outputJ = gridCheckJ[randEasy]  // to find the given I and J found above
-        grid[outputI][outputJ] = opponentMarker        // set move and return
-        return grid
-    }
-    if (diff == Difficulty.Medium) {
-        if (!randMed) {   // runs easy code from above
-            if (gridEmpty == (gridSize * gridSize)) {
-                return grid     // test for full board
-            }
-            randEasy = Random.nextInt((gridSize * gridSize) - gridEmpty)
-            val outputI = gridCheckI[randEasy]
-            val outputJ = gridCheckJ[randEasy]
-            grid[outputI][outputJ] = opponentMarker
-            return grid
-        } else {   // else runs hard code
-        }
-    }
-    if (diff == Difficulty.Hard || randMed) {
-        var bestScore = Int.MIN_VALUE   // maximize this value, start with lowest
-        var outputI = 0
-        var outputJ = 0
-        for (i in 0 until gridSize) {   // loop through every move and find best outcomes
+        for (i in 0 until gridSize) {     // find spots that are filled or empty
             for (j in 0 until gridSize) {
                 if (grid[i][j] == GridEntry.E) {
-                    grid[i][j] = opponentMarker // make the test move
-                    val score =
-                        miniMax(
-                            grid,
-                            1,
-                            0,
-                            Int.MIN_VALUE,
-                            Int.MAX_VALUE,
-                            opponentMarker,
-                            playerMarker
-                        ) // call miniMax for player
-                    grid[i][j] = GridEntry.E // undo the test move
-                    if (score > bestScore) {    // find new best score and move
-                        bestScore = score
-                        outputI = i
-                        outputJ = j
+                    gridCheckI.add(i)
+                    gridCheckJ.add(j)
+                } else {
+                    gridEmpty += 1
+                }
+                gridCount += 1
+            }
+        }
+
+        if (diff == Difficulty.Easy) {
+            if (gridEmpty == (gridSize * gridSize)) {
+                return@withContext grid     // test for full board
+            }
+            randEasy = Random.nextInt((gridSize * gridSize) - gridEmpty)
+            val outputI = gridCheckI[randEasy]  // takes the random value and uses it -
+            val outputJ = gridCheckJ[randEasy]  // to find the given I and J found above
+            grid[outputI][outputJ] = opponentMarker        // set move and return
+            return@withContext grid
+        }
+        if (diff == Difficulty.Medium) {
+            if (!randMed) {   // runs easy code from above
+                if (gridEmpty == (gridSize * gridSize)) {
+                    return@withContext grid     // test for full board
+                }
+                randEasy = Random.nextInt((gridSize * gridSize) - gridEmpty)
+                val outputI = gridCheckI[randEasy]
+                val outputJ = gridCheckJ[randEasy]
+                grid[outputI][outputJ] = opponentMarker
+                return@withContext grid
+            } else {   // else runs hard code
+            }
+        }
+        if (diff == Difficulty.Hard || randMed) {
+            var bestScore = Int.MIN_VALUE   // maximize this value, start with lowest
+            var outputI = 0
+            var outputJ = 0
+            for (i in 0 until gridSize) {   // loop through every move and find best outcomes
+                for (j in 0 until gridSize) {
+                    if (grid[i][j] == GridEntry.E) {
+                        grid[i][j] = opponentMarker // make the test move
+                        val score =
+                            miniMax(
+                                grid,
+                                1,
+                                0,
+                                Int.MIN_VALUE,
+                                Int.MAX_VALUE,
+                                opponentMarker,
+                                playerMarker
+                            ) // call miniMax for player
+                        grid[i][j] = GridEntry.E // undo the test move
+                        if (score > bestScore) {    // find new best score and move
+                            bestScore = score
+                            outputI = i
+                            outputJ = j
+                        }
                     }
                 }
             }
+            grid[outputI][outputJ] = opponentMarker    // set move and return
         }
-        grid[outputI][outputJ] = opponentMarker    // set move and return
+        return@withContext grid
     }
-    return grid
 }
 
 fun miniMax(

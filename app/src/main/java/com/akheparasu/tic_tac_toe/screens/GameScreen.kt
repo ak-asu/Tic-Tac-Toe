@@ -65,7 +65,8 @@ import com.akheparasu.tic_tac_toe.utils.PADDING_HEIGHT
 import com.akheparasu.tic_tac_toe.utils.Preference
 import com.akheparasu.tic_tac_toe.utils.SPACER_HEIGHT
 import com.akheparasu.tic_tac_toe.utils.Winner
-import kotlinx.coroutines.async
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Date
@@ -242,11 +243,12 @@ fun GameScreen(
         gameResultData = checkWinner()
         if (!playerTurn && gameMode != GameMode.OneDevice) {
             if (gameMode == GameMode.Computer && gameResultData == null) {
-                grid = async {
+                CoroutineScope(Dispatchers.Main).launch {
                     delay(1000)
-                    runAITurn(grid, difficultyFlow.value, playerMarker, opponentMarker)
-                }.await()
-                playerTurn = true
+                    grid = runAITurn(grid, difficultyFlow.value, playerMarker, opponentMarker)
+                    playerTurn = true
+                    gameResultData = checkWinner()
+                }
             } else if (gameMode == GameMode.TwoDevices) {
                 // done so that does not change turn when screen initializes
                 val num = if (grid.flatten().any { it != GridEntry.E }) {
@@ -261,9 +263,9 @@ fun GameScreen(
                     )
                 )
                 connectionService.sendData(connectionService.receivedDataModel)
+                gameResultData = checkWinner()
             }
         }
-        gameResultData = checkWinner()
     }
     if (gameMode == GameMode.TwoDevices) {
         LaunchedEffect(connectedDevice?.value) {
@@ -355,6 +357,16 @@ fun GameScreen(
             )
         }
         Spacer(modifier = Modifier.height(SPACER_HEIGHT.dp))
+        if (gameMode == GameMode.Computer) {
+            Text(
+                if (!playerTurn && gameResultData == null) {
+                    "Computer thinking..."
+                } else {
+                    ""
+                }
+            )
+            Spacer(modifier = Modifier.height(SPACER_HEIGHT.dp))
+        }
         Box(
             modifier = Modifier.size(maxCellSize.dp * 3),
             contentAlignment = Alignment.Center
@@ -419,7 +431,7 @@ fun GridCell(value: String, maxCellSize: Float, onTap: () -> Unit) {
                 maxHeight = maxCellSize.dp
             )
             .padding((PADDING_HEIGHT / 2).dp)
-            .clickable (enabled = value.isEmpty()) { onTap() },
+            .clickable(enabled = value.isEmpty()) { onTap() },
         contentAlignment = Alignment.Center
     ) {
         Canvas(
