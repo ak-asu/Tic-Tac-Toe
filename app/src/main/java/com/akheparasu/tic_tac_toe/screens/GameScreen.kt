@@ -244,6 +244,7 @@ fun GameScreen(
         if (!playerTurn && gameMode != GameMode.OneDevice) {
             if (gameMode == GameMode.Computer && gameResultData == null) {
                 CoroutineScope(Dispatchers.Main).launch {
+                    // a delay to added for a better user gameplay
                     delay(1000)
                     grid = runAITurn(grid, difficultyFlow.value, playerMarker, opponentMarker)
                     playerTurn = true
@@ -280,8 +281,13 @@ fun GameScreen(
                 connectionService.disconnectDevice()
             }
         }
-        LaunchedEffect(resetGame) {
-            if (resetGame) {
+        BackHandler {
+            connectionService.disconnectDevice()
+        }
+    }
+    LaunchedEffect(resetGame) {
+        if (resetGame) {
+            if (gameMode == GameMode.TwoDevices) {
                 if (!connectionService.receivedDataModel.gameState.reset) {
                     connectionService.sendData(
                         connectionService.receivedDataModel.copy(gameState = GameState(reset = true))
@@ -289,13 +295,10 @@ fun GameScreen(
                 }
                 connectionService.receivedDataModel =
                     connectionService.receivedDataModel.copy(gameState = GameState())
-                grid = Array(3) { Array(3) { GridEntry.E } }
-                playerTurn = preference == Preference.First
-                resetGame = false
             }
-        }
-        BackHandler {
-            connectionService.disconnectDevice()
+            grid = Array(3) { Array(3) { GridEntry.E } }
+            playerTurn = preference == Preference.First
+            resetGame = false
         }
     }
     DisposableEffect(Unit) {

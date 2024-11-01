@@ -14,6 +14,7 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
@@ -245,7 +246,7 @@ class Connections(private val context: Context) {
                         if (it.name != null &&
                             !_devices.value.any { prev -> it.address == prev.address }
                         ) {
-                            _devices.value = _devices.value.apply { add(it) }
+                            _devices.value = _devices.value.toMutableList().apply { add(it) }
                         }
                     }
                 }
@@ -401,6 +402,7 @@ class Connections(private val context: Context) {
                             continue
                         }
                         val message = deserializeGameData(data)
+                        Log.e("ConnectionLogs", data)
                         if (!message.gameState.connectionEstablished) {
                             cancel()
                             break
