@@ -30,6 +30,7 @@ import com.akheparasu.tic_tac_toe.utils.OnlineSetupStage
 import com.akheparasu.tic_tac_toe.utils.PADDING_HEIGHT
 import com.akheparasu.tic_tac_toe.utils.Preference
 import com.akheparasu.tic_tac_toe.utils.SPACER_HEIGHT
+import kotlin.random.Random
 
 
 @Composable
@@ -112,7 +113,11 @@ fun HomeScreen() {
                             navController?.navigate(
                                 getGamePath(
                                     gameMode.value!!,
-                                    Preference.NoPreference
+                                    if (Random.nextBoolean()) {
+                                        Preference.First
+                                    } else {
+                                        Preference.Second
+                                    }
                                 )
                             )
                             gameMode.value = null
