@@ -29,4 +29,4 @@ Using Jetpack Compose, the application follows a modern and declarative UI appro
 
 
 ## Contributors
-Developed by CSE 535 Project Group 25, with team members collaborating on module development, integration, and testing to ensure a comprehensive, polished user experience.
+Developed by collaborating on module development, integration, and testing to ensure a comprehensive, polished user experience.
